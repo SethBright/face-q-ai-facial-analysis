@@ -1,0 +1,7 @@
+{
+  "name": "Face-Q: AI Facial Analysis",
+  "description": "A premium facial analysis and grooming coach app using Gemini AI for personalized skin and symmetry insights.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
