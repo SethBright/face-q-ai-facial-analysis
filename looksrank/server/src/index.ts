@@ -218,7 +218,7 @@ Be brutally honest, but precise.Analyze the image and return ONLY the JSON.
         console.error('Error ranking face:', error);
         // Log more details if available (Gemini errors often have a structured response)
         if (error.response) console.error('Gemini Error Response:', JSON.stringify(error.response, null, 2));
-        res.status(500).json({ error: 'Failed to process image' });
+        res.status(500).json({ error: `Backend Error: ${error.message || 'Unknown error'}` });
     }
 });
 
