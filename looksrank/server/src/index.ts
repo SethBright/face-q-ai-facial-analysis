@@ -13,18 +13,31 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // Initialize Gemini SDK
-// Note: Requires EXPORT GEMINI_API_KEY="..." in environment
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const genaiKey = process.env.GEMINI_API_KEY;
+const ai = genaiKey ? new GoogleGenAI({ apiKey: genaiKey }) : null;
+if (!ai) console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
 
 // Initialize Supabase Admin Client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let supabaseAdmin: any = null;
+
+if (supabaseUrl && supabaseServiceKey) {
+    try {
+        supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    } catch (e) {
+        console.error("ERROR: Failed to initialize Supabase client:", e);
+    }
+} else {
+    console.warn("WARNING: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing. Leaderboards and coin fulfillment will fail.");
+}
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2025-02-24.acacia' as any, // Using latest stable or what's available
-});
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? new Stripe(stripeKey, {
+    apiVersion: '2025-02-24.acacia' as any,
+}) : null;
+if (!stripe) console.warn("WARNING: STRIPE_SECRET_KEY is missing. Checkout will fail.");
 
 app.use(cors());
 
@@ -32,6 +45,10 @@ app.use(cors());
 app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!stripe) {
+        return res.status(500).send('Stripe not initialized');
+    }
 
     if (!sig || !endpointSecret) {
         return res.status(400).send('Webhook secret or signature missing');
@@ -53,7 +70,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         const userId = session.metadata?.userId;
         const coinsToAdd = parseInt(session.metadata?.coins || '0', 10);
 
-        if (userId && coinsToAdd > 0) {
+        if (userId && coinsToAdd > 0 && supabaseAdmin) {
             console.log(`Fulfilling purchase: Adding ${coinsToAdd} coins to user ${userId}`);
 
             // Get current coins
@@ -80,7 +97,15 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
 app.use(express.json({ limit: '20mb' }));
 
 app.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok' });
+    res.json({
+        status: 'ok',
+        config: {
+            hasGemini: !!ai,
+            hasSupabase: !!supabaseAdmin,
+            hasStripe: !!stripe,
+            hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET
+        }
+    });
 });
 
 app.post('/api/rank', async (req: Request, res: Response) => {
@@ -98,6 +123,10 @@ app.post('/api/rank', async (req: Request, res: Response) => {
 
         const mimeType = matches[1];
         const base64Data = matches[2];
+
+        if (!ai) {
+            return res.status(500).json({ error: 'AI Backend not configured (missing API Key)' });
+        }
 
         // 2. The single-face & scoring prompt
         const prompt = `
@@ -194,6 +223,7 @@ Be brutally honest, but precise.Analyze the image and return ONLY the JSON.
 // --- CRON JOBS ---
 // Daily Reset (Midnight)
 cron.schedule('0 0 * * *', async () => {
+    if (!supabaseAdmin) return console.warn("Cron skipped: Supabase not initialized");
     console.log('Running daily leaderboard reset...');
     try {
         const { error } = await supabaseAdmin
@@ -210,6 +240,7 @@ cron.schedule('0 0 * * *', async () => {
 
 // Weekly Reset (Monday Midnight)
 cron.schedule('0 0 * * 1', async () => {
+    if (!supabaseAdmin) return console.warn("Cron skipped: Supabase not initialized");
     console.log('Running weekly leaderboard reset...');
     try {
         const { error } = await supabaseAdmin
@@ -228,6 +259,7 @@ cron.schedule('0 0 * * 1', async () => {
 // Manual reset endpoint (for testing/admin use)
 app.post('/api/admin/reset', async (req: Request, res: Response) => {
     const { type } = req.body; // 'daily' or 'weekly'
+    if (!supabaseAdmin) return res.status(500).json({ error: 'Supabase not initialized' });
     try {
         if (type === 'daily') {
             await supabaseAdmin.from('profiles').update({ best_today: 0 }).neq('best_today', 0);
@@ -246,6 +278,10 @@ app.post('/api/admin/reset', async (req: Request, res: Response) => {
 // --- STRIPE CHECKOUT ---
 app.post('/api/create-checkout-session', async (req: Request, res: Response) => {
     const { userId, packageId, amount, coins } = req.body; // e.g., amount is in cents, coins is number to add
+
+    if (!stripe) {
+        return res.status(500).json({ error: 'Stripe not configured correctly' });
+    }
 
     if (!userId || !amount || !coins) {
         return res.status(400).json({ error: 'Missing required parameters' });
@@ -286,6 +322,6 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
     }
 });
 
-app.listen(port, () => {
-    console.log(`LooksRank API server running on port ${port} `);
+app.listen(Number(port), "0.0.0.0", () => {
+    console.log(`LooksRank API server running on port ${port} (0.0.0.0)`);
 });
