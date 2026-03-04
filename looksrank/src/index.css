@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Roboto", "Helvetica Neue", sans-serif;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-dark-900: #0f172a;
+  --color-dark-800: #1e293b;
+  --color-dark-700: #334155;
+  --color-surface: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-dark-900 text-white antialiased font-sans;
+  }
+}
+
+.glass-panel {
+  @apply bg-surface backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl;
+}
+
+.primary-gradient {
+  @apply bg-gradient-to-br from-primary-500 to-indigo-600;
+}
