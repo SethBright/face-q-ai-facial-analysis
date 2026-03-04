@@ -15,19 +15,7 @@ const port = process.env.PORT || 3001;
 // Initialize Gemini SDK
 const genaiKey = process.env.GEMINI_API_KEY;
 const genAI = genaiKey ? new GoogleGenerativeAI(genaiKey) : null;
-if (!genAI) {
-    console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
-} else {
-    // Diagnostic: List available models on startup to verify names
-    (async () => {
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            console.log("Gemini SDK Initialized. Checking model connectivity...");
-        } catch (e) {
-            console.error("Gemini Diagnostic Error:", e);
-        }
-    })();
-}
+if (!genAI) console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
 
 // Initialize Supabase Admin Client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -140,7 +128,7 @@ app.post('/api/rank', async (req: Request, res: Response) => {
             return res.status(500).json({ error: 'AI Backend not configured (missing API Key)' });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' }, { apiVersion: 'v1' });
 
         // 2. The single-face & scoring prompt
         const prompt = `
