@@ -31,7 +31,7 @@ interface AppState {
     setActiveTab: (tab: Tab) => void;
     addCoins: (amount: number) => Promise<void>;
     deductCoins: (amount: number) => Promise<void>;
-    updateBestScores: (score: number, image?: string) => Promise<void>;
+    updateBestScores: (result: { score: number, psl: number, tier: string }, image?: string) => Promise<void>;
     initializeAuth: () => Promise<void>;
     signUp: (handle: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logIn: (handle: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -71,7 +71,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             await supabase.from('profiles').update({ coins: newTotal }).eq('id', state.userId);
         }
     },
-    updateBestScores: async (score, image) => {
+    updateBestScores: async (result, image) => {
+        const { score, psl, tier } = result;
         const state = get();
         const isNewHigh = score > state.bestAllTime;
         const newToday = Math.max(state.bestToday, score);
@@ -120,12 +121,27 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
 
         if (state.userId) {
+            // 1. Update Profile (for Leaderboard)
             await supabase.from('profiles').update({
+                score: score,
+                psl: psl,
+                tier: tier,
                 best_today: newToday,
                 best_weekly: newWeekly,
                 best_all_time: newAllTime,
                 avatar_url: newAvatarUrl
             }).eq('id', state.userId);
+
+            // 2. Log to Ranks (for History)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('ranks').insert({
+                    user_id: user.id,
+                    score: score,
+                    psl: psl,
+                    image_url: newAvatarUrl
+                });
+            }
         }
     },
     challenges: [],

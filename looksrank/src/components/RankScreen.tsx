@@ -65,7 +65,7 @@ export const RankScreen: React.FC = () => {
             const res = await rankFace(imageToScore);
 
             setResult(res);
-            updateBestScores(res.score, imageToScore);
+            updateBestScores(res, imageToScore);
 
             // Give rewards if beaten for double or nothing
             if (type === 'double-or-nothing' && res.score > prevBest) {

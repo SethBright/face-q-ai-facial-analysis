@@ -24,7 +24,7 @@ export const LeaderboardScreen: React.FC = () => {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, username, coins, best_today, best_weekly, best_all_time, tier, avatar_url')
+            .select('id, coins, best_today, best_weekly, best_all_time, tier, avatar_url')
             .gt(column, 0) // Only show users who have done a rating
             .order(column, { ascending: false })
             .limit(500); // Show top 500
@@ -99,7 +99,7 @@ export const LeaderboardScreen: React.FC = () => {
                                         className="w-full h-full object-cover animate-in fade-in duration-500"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = 'none';
-                                            (e.target as HTMLImageElement).parentElement!.innerText = entry.username.substring(0, 2).toUpperCase();
+                                        (e.target as HTMLImageElement).parentElement!.innerText = entry.id.substring(0, 2).toUpperCase();
                                         }}
                                     />
                                 ) : (
@@ -108,7 +108,7 @@ export const LeaderboardScreen: React.FC = () => {
                             </div>
 
                             <div className="flex-1 overflow-hidden">
-                                <h4 className="font-bold text-base truncate pr-2 tracking-tight">{entry.username}</h4>
+                                <h4 className="font-bold text-base truncate pr-2 tracking-tight">{entry.id}</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <p className="max-w-fit text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-dark-900 border border-white/5 text-gray-400">
                                         {entry.tier || 'ROOKIE'}
@@ -140,7 +140,7 @@ export const LeaderboardScreen: React.FC = () => {
             {challengeTarget && (
                 <ChallengeWagerModal
                     targetId={challengeTarget.id}
-                    targetName={challengeTarget.name}
+                    targetName={challengeTarget.id}
                     targetScore={challengeTarget.score}
                     onClose={() => setChallengeTarget(null)}
                 />
