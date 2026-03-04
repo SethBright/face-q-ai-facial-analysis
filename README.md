@@ -1,4 +1,4 @@
-# Face-Q | AI Facial Analysis
+# Looks IQ | AI Facial Analysis
 
 AI-powered facial analysis app built with React, Vite, and Google Gemini. Capture front and side selfies to get AI-generated aesthetic ratings and recommendations.
 

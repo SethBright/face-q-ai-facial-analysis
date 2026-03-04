@@ -133,9 +133,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ lastViewedInbox: now });
     },
     initializeAuth: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Initializing Auth...");
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) console.error("Session error:", error);
 
         if (session?.user) {
+            console.log("Found session for user:", session.user.id);
             // Load their profile
             const { data: profile } = await supabase
                 .from('profiles')

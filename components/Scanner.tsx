@@ -13,14 +13,26 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture, onCancel }) => {
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+
     const startCamera = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } } 
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        const videoEl = videoRef.current;
+        if (!videoEl) return;
+        videoEl.srcObject = stream;
+        // iOS/Capacitor WebView often ignores autoPlay; must call play() after stream is attached.
+        // Use loadedmetadata so we play once the video is ready (required on iOS).
+        const playWhenReady = () => {
+          videoEl.play().catch(() => {});
+          videoEl.removeEventListener('loadedmetadata', playWhenReady);
+          videoEl.removeEventListener('loadeddata', playWhenReady);
+        };
+        videoEl.addEventListener('loadedmetadata', playWhenReady);
+        videoEl.addEventListener('loadeddata', playWhenReady);
+        // Also try immediately in case events already fired or aren't used
+        videoEl.play().catch(() => {});
       } catch (err) {
         setError('Camera access denied. Please check permissions.');
       }
@@ -42,7 +54,12 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture, onCancel }) => {
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        // Flip horizontally so captured image matches un-mirrored preview (not inverted)
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         onCapture(dataUrl);
       }
@@ -59,18 +76,21 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture, onCancel }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black overflow-hidden select-none">
-      {/* Background Video - Full Screen */}
+    <div className="fixed inset-0 z-[60] bg-black overflow-hidden select-none isolate">
+      {/* Background Video - Full Screen; scaleX(-1) un-mirrors front camera so it's not inverted */}
       <video 
         ref={videoRef} 
         autoPlay 
         playsInline 
         muted
+        disablePictureInPicture
+        disableRemotePlayback
         className="absolute inset-0 w-full h-full object-cover"
+        style={{ transform: 'scaleX(-1)' }}
       />
       
-      {/* Overlays Container */}
-      <div className="absolute inset-0 flex flex-col pointer-events-none">
+      {/* Overlays Container - elevated above video to prevent debug text bleed-through */}
+      <div className="absolute inset-0 flex flex-col pointer-events-none z-10">
         
         {/* Top Bar - Close Button */}
         <div className="p-8 flex justify-start pointer-events-auto">
@@ -107,7 +127,8 @@ const Scanner: React.FC<ScannerProps> = ({ onCapture, onCancel }) => {
         <div className="pb-16 flex flex-col items-center justify-center pointer-events-auto">
           <button 
             onClick={handleCapture}
-            className="group relative w-24 h-24 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            className="group relative w-24 h-24 rounded-full flex items-center justify-center active:scale-95 transition-transform outline-none focus:outline-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {/* Outer Decorative Ring */}
             <div className="absolute inset-0 rounded-full border-[8px] border-white/20" />

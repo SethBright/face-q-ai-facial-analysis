@@ -14,6 +14,7 @@ export const RankScreen: React.FC = () => {
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const cameraRef = useRef<CameraHandle>(null);
     const [stakeAmount, setStakeAmount] = useState<number>(4);
+    const [scanError, setScanError] = useState<string | null>(null);
 
     // For sharing
     const resultRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,9 @@ export const RankScreen: React.FC = () => {
         setCapturedImage(imageToScore);
 
         try {
+            // Artificial delay to ensure user sees the cool animation
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
             const prevBest = bestToday;
             const res = await rankFace(imageToScore);
 
@@ -70,7 +74,13 @@ export const RankScreen: React.FC = () => {
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : "Failed to reach backend";
             console.error("Failed to reach backend:", e);
-            alert(message);
+
+            // Show error briefly in the scanning UI before hiding it
+            // This prevents the "flash" of the scanning screen disappearing instantly
+            setScanError(message);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            setScanError(null);
+
             addCoins(cost); // Refund on catastrophic error
         } finally {
             setIsScanning(false);
@@ -130,12 +140,25 @@ export const RankScreen: React.FC = () => {
                                 <Loader2 className="w-10 h-10 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                             </div>
                             <div className="flex flex-col items-center gap-2">
-                                <p className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400 tracking-widest uppercase animate-pulse">
-                                    Analyzing Face
-                                </p>
-                                <p className="text-xs text-indigo-300/80 uppercase tracking-widest animate-pulse delay-150">
-                                    Extracting PSL metrics...
-                                </p>
+                                {scanError ? (
+                                    <>
+                                        <p className="font-black text-xl text-red-400 tracking-widest uppercase animate-in shake">
+                                            Analysis Failed
+                                        </p>
+                                        <p className="text-xs text-red-300/80 uppercase tracking-widest text-center max-w-[200px]">
+                                            {scanError}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400 tracking-widest uppercase animate-pulse">
+                                            Analyzing Face
+                                        </p>
+                                        <p className="text-xs text-indigo-300/80 uppercase tracking-widest animate-pulse delay-150">
+                                            Extracting PSL metrics...
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

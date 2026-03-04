@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.faceq.app',
-  appName: 'Face-Q',
+  appId: 'com.looksiq.ios',
+  appName: 'Looks IQ',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

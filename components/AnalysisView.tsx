@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AnalysisResult } from '../types';
 
@@ -6,28 +5,59 @@ interface AnalysisViewProps {
   result: AnalysisResult | null;
   isLoading?: boolean;
   image: string;
+  isPro?: boolean;
   onClose: () => void;
+  onGetPro: () => void;
+  onRetryAnalysis?: () => void;
 }
 
-const AnalysisView: React.FC<AnalysisViewProps> = ({ result, isLoading, image, onClose }) => {
-  const MetricRow = ({ label, value }: { label: string; value?: number }) => (
-    <div className="flex flex-col gap-2">
-      <div className="flex justify-between items-center">
+/** Score 1-100 → color for number and bar: red (low) → orange → yellow → green (good). */
+function getScoreColor(score: number): string {
+  if (score <= 30) return '#ef4444';   // red – very low
+  if (score <= 50) return '#f97316';   // orange – bad
+  if (score <= 70) return '#eab308';   // yellow – middle
+  return '#22c55e';                    // green – good
+}
+
+const AnalysisView: React.FC<AnalysisViewProps> = ({ result, isLoading, image, isPro, onClose, onGetPro, onRetryAnalysis }) => {
+  const isLocked = result === null;
+  const showPaywall = isLocked && !isPro;
+
+  /** Placeholder digits when locked so the number slot is visible but blurred (per-metric so layout is consistent). */
+  const LOCKED_PLACEHOLDERS: Record<string, number> = {
+    Overall: 72,
+    Potential: 68,
+    Masculinity: 65,
+    'Skin quality': 78,
+    Jawline: 71,
+    Cheekbones: 74,
+  };
+
+  const MetricRow = ({ label, value, blurred }: { label: string; value?: number; blurred?: boolean }) => {
+    const displayValue = value ?? LOCKED_PLACEHOLDERS[label] ?? 72;
+    const position = value != null ? value : 0;
+    const color = blurred ? undefined : getScoreColor(displayValue);
+    return (
+      <div className="flex flex-col gap-1.5">
         <span className="text-zinc-200 text-sm font-medium">{label}</span>
+        <span
+          className={`text-2xl font-bold tabular-nums ${blurred ? 'select-none text-zinc-500' : ''}`}
+          style={blurred ? { filter: 'blur(6px)', userSelect: 'none' } : color ? { color } : undefined}
+        >
+          {displayValue}
+        </span>
+        <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+            style={{
+              width: `${position}%`,
+              backgroundColor: color ?? 'rgba(255,255,255,0.4)',
+            }}
+          />
+        </div>
       </div>
-      <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
-        {isLoading ? (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/20 to-transparent animate-shimmer" />
-        ) : (
-          <>
-            {/* Blurred Teaser Overlay */}
-            <div className="absolute inset-0 bg-white/10 blur-[6px] rounded-full scale-x-[0.6] origin-left" />
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-purple-400/30 blur-md w-[80%]" />
-          </>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -41,17 +71,32 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, isLoading, image, o
     );
   }
 
-  if (!result) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center p-6 pb-12 animate-in slide-in-from-bottom duration-500">
-      <div className="flex flex-col items-center mb-10 text-center">
+    <div
+      className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center p-6 pb-12 animate-in slide-in-from-bottom duration-500 overflow-y-auto overflow-x-hidden"
+      style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top) + 2.5rem))' }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute left-5 z-50 rounded-full bg-zinc-900/90 border border-white/10 p-2.5 text-zinc-200 hover:bg-zinc-800 transition-colors"
+        style={{ top: 'max(4.75rem, calc(env(safe-area-inset-top) + 3.25rem))' }}
+        aria-label="Close results"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
+          <path d="M18 6L6 18" />
+          <path d="M6 6l12 12" />
+        </svg>
+      </button>
+      <div className="flex flex-col items-center mb-16 text-center">
         <h2 className="text-3xl font-extrabold text-white mb-2 flex items-center gap-2 justify-center">
-          👀 Reveal your results
+          {isPro || !isLocked ? 'Ratings' : '👀 Reveal your results'}
         </h2>
-        <p className="text-zinc-500 text-sm max-w-[280px]">
-          Invite 3 friends or get Face-Q Pro to view your results
-        </p>
+        {showPaywall && (
+          <p className="text-zinc-500 text-sm max-w-[280px]">
+            Get Looks IQ Pro to view your results
+          </p>
+        )}
       </div>
 
       <div className="relative w-full max-w-sm">
@@ -60,33 +105,45 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ result, isLoading, image, o
           <img src={image} alt="User" className="w-full h-full object-cover" />
         </div>
 
-        {/* Results Card */}
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 pt-20 shadow-2xl">
+        {/* Results Card - subtle diffuse glow */}
+        <div
+          className="bg-zinc-900/60 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 pt-20"
+          style={{
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 80px -20px rgba(0,0,0,0.4)',
+          }}
+        >
           <div className="grid grid-cols-2 gap-x-8 gap-y-10">
-            <MetricRow label="Overall" value={result.overall} />
-            <MetricRow label="Potential" value={result.potential} />
-            <MetricRow label="Masculinity" value={result.masculinity} />
-            <MetricRow label="Skin quality" value={result.skinQuality} />
-            <MetricRow label="Jawline" value={result.jawline} />
-            <MetricRow label="Cheekbones" value={result.cheekbones} />
+            <MetricRow label="Overall" value={result?.overall} blurred={isLocked} />
+            <MetricRow label="Potential" value={result?.potential} blurred={isLocked} />
+            <MetricRow label="Masculinity" value={result?.masculinity} blurred={isLocked} />
+            <MetricRow label="Skin quality" value={result?.skinQuality} blurred={isLocked} />
+            <MetricRow label="Jawline" value={result?.jawline} blurred={isLocked} />
+            <MetricRow label="Cheekbones" value={result?.cheekbones} blurred={isLocked} />
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-sm mt-12 space-y-4">
-        <button 
-          className="w-full py-5 bg-[#8b31ff] hover:bg-[#9d4edd] active:scale-[0.98] text-white text-lg font-bold rounded-[30px] shadow-xl transition-all flex items-center justify-center gap-2"
-          onClick={() => alert("Upgrade to Face-Q Pro to unlock your full analysis!")}
-        >
-          <span>💪</span> Get Face-Q Pro
-        </button>
-        <button 
-          onClick={onClose}
-          className="w-full py-5 bg-zinc-900 border border-white/5 hover:bg-zinc-800 text-white text-lg font-bold rounded-[30px] transition-all active:scale-[0.98]"
-        >
-          Invite 3 Friends
-        </button>
-      </div>
+      {showPaywall && (
+        <div className="w-full max-w-sm mt-12">
+          <button
+            className="w-full py-5 bg-gradient-to-r from-[#6b21a8] via-[#7c3aed] to-[#a855f7] hover:opacity-95 active:scale-[0.98] text-white text-lg font-bold rounded-[30px] shadow-xl transition-all flex items-center justify-center gap-2"
+            onClick={onGetPro}
+          >
+            <span>💪</span> Get Looks IQ Pro
+          </button>
+        </div>
+      )}
+      {isPro && isLocked && onRetryAnalysis && (
+        <div className="w-full max-w-sm mt-12">
+          <button
+            type="button"
+            onClick={onRetryAnalysis}
+            className="w-full py-5 bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white text-lg font-bold rounded-[30px] border border-white/20 transition-all"
+          >
+            Try again
+          </button>
+        </div>
+      )}
     </div>
   );
 };
