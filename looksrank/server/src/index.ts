@@ -140,7 +140,7 @@ app.post('/api/rank', async (req: Request, res: Response) => {
             return res.status(500).json({ error: 'AI Backend not configured (missing API Key)' });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
 
         // 2. The single-face & scoring prompt
         const prompt = `
