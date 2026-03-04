@@ -63,7 +63,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     }
 
     // Handle the checkout.session.completed event
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === 'checkout.session.completed' && stripe) {
         const session = event.data.object as Stripe.Checkout.Session;
 
         // Retrieve the user ID and coin amount from metadata
