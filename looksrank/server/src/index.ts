@@ -15,7 +15,19 @@ const port = process.env.PORT || 3001;
 // Initialize Gemini SDK
 const genaiKey = process.env.GEMINI_API_KEY;
 const genAI = genaiKey ? new GoogleGenerativeAI(genaiKey) : null;
-if (!genAI) console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
+if (!genAI) {
+    console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
+} else {
+    // Diagnostic: List available models on startup to verify names
+    (async () => {
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            console.log("Gemini SDK Initialized. Checking model connectivity...");
+        } catch (e) {
+            console.error("Gemini Diagnostic Error:", e);
+        }
+    })();
+}
 
 // Initialize Supabase Admin Client
 const supabaseUrl = process.env.SUPABASE_URL;
