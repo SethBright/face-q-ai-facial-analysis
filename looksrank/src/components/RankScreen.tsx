@@ -113,12 +113,31 @@ export const RankScreen: React.FC = () => {
                 !result ? "glass-panel overflow-hidden" : "bg-dark-950/20 backdrop-blur-none border-transparent shadow-none"
             )}>
                 {isScanning ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-dark-900/80 backdrop-blur-sm animate-in fade-in">
-                        <div className="relative">
-                            <div className="w-24 h-24 rounded-full border-4 border-t-primary-500 border-white/10 animate-spin" />
-                            <Loader2 className="w-8 h-8 text-primary-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden">
+                        {capturedImage && (
+                            <img src={capturedImage} alt="Scanning..." className="absolute inset-0 w-full h-full object-cover opacity-20" />
+                        )}
+
+                        {/* Scanning Line Animation */}
+                        <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden flex items-start">
+                            <div className="w-full h-1 bg-primary-400 shadow-[0_0_20px_rgba(139,92,246,1)] scanner-line" />
                         </div>
-                        <p className="font-bold text-lg text-primary-400 tracking-widest uppercase">Analyzing Face...</p>
+
+                        <div className="relative z-10 flex flex-col items-center gap-6">
+                            <div className="relative">
+                                <div className="w-32 h-32 rounded-full border-4 border-t-primary-500 border-white/10 animate-spin" />
+                                <div className="absolute inset-0 border-4 border-r-indigo-500 border-transparent rounded-full animate-[spin_1.5s_linear_infinite_reverse]" />
+                                <Loader2 className="w-10 h-10 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <p className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400 tracking-widest uppercase animate-pulse">
+                                    Analyzing Face
+                                </p>
+                                <p className="text-xs text-indigo-300/80 uppercase tracking-widest animate-pulse delay-150">
+                                    Extracting PSL metrics...
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 ) : null}
 

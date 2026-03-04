@@ -23,3 +23,21 @@
 .primary-gradient {
   @apply bg-gradient-to-br from-primary-500 to-indigo-600;
 }
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  50% {
+    transform: translateY(100vh);
+  }
+
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+.scanner-line {
+  animation: scan 3s ease-in-out infinite;
+}
