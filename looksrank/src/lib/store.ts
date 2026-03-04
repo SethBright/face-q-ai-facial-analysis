@@ -26,11 +26,12 @@ interface AppState {
     bestToday: number;
     bestWeekly: number;
     bestAllTime: number;
+    avatarUrl: string | null;
     setDisplayName: (name: string) => void;
     setActiveTab: (tab: Tab) => void;
     addCoins: (amount: number) => Promise<void>;
     deductCoins: (amount: number) => Promise<void>;
-    updateBestScores: (score: number) => Promise<void>;
+    updateBestScores: (score: number, image?: string) => Promise<void>;
     initializeAuth: () => Promise<void>;
     createProfile: (name: string) => Promise<{ success: boolean; error?: string }>;
     challenges: Challenge[];
@@ -45,40 +46,83 @@ export const useAppStore = create<AppState>((set, get) => ({
     userId: null,
     activeTab: 'rank',
     displayName: null,
-    coins: 20, // Starter coins
+    coins: 20,
     bestToday: 0,
     bestWeekly: 0,
     bestAllTime: 0,
-    setDisplayName: (name) => set({ displayName: name }),
-    setActiveTab: (tab) => set({ activeTab: tab }),
-    addCoins: async (amount) => {
+    avatarUrl: null,
+    setDisplayName: (name: string) => set({ displayName: name }),
+    setActiveTab: (tab: Tab) => set({ activeTab: tab }),
+    addCoins: async (amount: number) => {
         const state = get();
-        const newTotal = state.coins + amount;
+        const newTotal = (state.coins || 0) + amount;
         set({ coins: newTotal });
         if (state.userId) {
             await supabase.from('profiles').update({ coins: newTotal }).eq('id', state.userId);
         }
     },
-    deductCoins: async (amount) => {
+    deductCoins: async (amount: number) => {
         const state = get();
-        const newTotal = Math.max(0, state.coins - amount);
+        const newTotal = Math.max(0, (state.coins || 0) - amount);
         set({ coins: newTotal });
         if (state.userId) {
             await supabase.from('profiles').update({ coins: newTotal }).eq('id', state.userId);
         }
     },
-    updateBestScores: async (score) => {
+    updateBestScores: async (score, image) => {
         const state = get();
+        const isNewHigh = score > state.bestAllTime;
         const newToday = Math.max(state.bestToday, score);
         const newWeekly = Math.max(state.bestWeekly, score);
         const newAllTime = Math.max(state.bestAllTime, score);
-        set({ bestToday: newToday, bestWeekly: newWeekly, bestAllTime: newAllTime });
+
+        let newAvatarUrl = state.avatarUrl;
+
+        // If it's a new all-time high OR they don't have an avatar at all, upload it
+        const shouldUpload = (isNewHigh || !newAvatarUrl) && image && state.userId;
+
+        if (shouldUpload) {
+            try {
+                // Convert base64 to Blob
+                const base64Data = image.split(',')[1];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+                const fileName = `${state.userId}_${Date.now()}.jpg`;
+                const { error: uploadError } = await supabase.storage
+                    .from('selfies')
+                    .upload(fileName, blob, { upsert: true });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('selfies')
+                    .getPublicUrl(fileName);
+
+                newAvatarUrl = publicUrl;
+            } catch (err) {
+                console.error("Failed to upload selfie:", err);
+            }
+        }
+
+        set({
+            bestToday: newToday,
+            bestWeekly: newWeekly,
+            bestAllTime: newAllTime,
+            avatarUrl: newAvatarUrl
+        });
 
         if (state.userId) {
             await supabase.from('profiles').update({
                 best_today: newToday,
                 best_weekly: newWeekly,
-                best_all_time: newAllTime
+                best_all_time: newAllTime,
+                avatar_url: newAvatarUrl
             }).eq('id', state.userId);
         }
     },
@@ -154,6 +198,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                     bestToday: profile.best_today || 0,
                     bestWeekly: profile.best_weekly || 0,
                     bestAllTime: profile.best_all_time || 0,
+                    avatarUrl: profile.avatar_url,
                     isInitialized: true
                 });
             }

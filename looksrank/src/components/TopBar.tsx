@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../lib/store';
-import { Coins, Crown } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { CoinStoreModal } from './CoinStoreModal';
 
 export const TopBar: React.FC = () => {
@@ -11,8 +11,8 @@ export const TopBar: React.FC = () => {
         <>
             <div className="w-full h-16 glass-panel flex items-center justify-between px-6 rounded-none rounded-b-3xl sticky top-0 z-50">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 primary-gradient rounded-full shadow-lg shadow-primary-500/20">
-                        <Crown className="w-5 h-5 text-white" />
+                    <div className="relative p-0.5 primary-gradient rounded-xl shadow-lg shadow-primary-500/20 overflow-hidden">
+                        <img src="/logo.jpg" alt="LooksRank Logo" className="w-8 h-8 rounded-[10px]" />
                     </div>
                     <h1 className="text-xl font-black tracking-tight text-white">
                         LooksRank

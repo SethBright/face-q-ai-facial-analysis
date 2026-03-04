@@ -65,7 +65,7 @@ export const RankScreen: React.FC = () => {
             const res = await rankFace(imageToScore);
 
             setResult(res);
-            updateBestScores(res.score);
+            updateBestScores(res.score, imageToScore);
 
             // Give rewards if beaten for double or nothing
             if (type === 'double-or-nothing' && res.score > prevBest) {
@@ -154,9 +154,17 @@ export const RankScreen: React.FC = () => {
                                         <p className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-indigo-400 tracking-widest uppercase animate-pulse">
                                             Analyzing Face
                                         </p>
-                                        <p className="text-xs text-indigo-300/80 uppercase tracking-widest animate-pulse delay-150">
-                                            Extracting PSL metrics...
-                                        </p>
+                                        <div className="flex flex-col gap-1 items-center">
+                                            <p className="text-[10px] text-indigo-300/80 uppercase tracking-[0.2em] animate-pulse">
+                                                Detecting facial landmarks...
+                                            </p>
+                                            <p className="text-[10px] text-indigo-300/40 uppercase tracking-[0.2em] animate-pulse delay-700">
+                                                Calculating neural symmetry...
+                                            </p>
+                                            <p className="text-[10px] text-indigo-300/20 uppercase tracking-[0.2em] animate-pulse delay-1000">
+                                                Finalizing PSL Metrics...
+                                            </p>
+                                        </div>
                                     </>
                                 )}
                             </div>

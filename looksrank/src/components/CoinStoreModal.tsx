@@ -42,11 +42,13 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
                 // Redirect to Stripe Checkout
                 window.location.href = data.url;
             } else {
-                throw new Error("Failed to get checkout URL");
+                const errorDetail = data.details || data.error || "Unknown backend error";
+                throw new Error(errorDetail);
             }
         } catch (err: any) {
-            console.error(err);
-            alert("Failed to initiate checkout. Please try again.");
+            console.error('Checkout error:', err);
+            const message = err.message || "Unknown error";
+            alert(`Failed to initiate checkout: ${message}. Check your internet connection and verify the backend is running.`);
             setIsProcessing(false);
         }
     };

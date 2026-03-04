@@ -294,7 +294,6 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
         const frontendUrl = process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:5173';
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
             line_items: [
                 {
                     price_data: {
@@ -319,8 +318,12 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
 
         res.json({ url: session.url });
     } catch (error: any) {
-        console.error('Error creating checkout session:', error);
-        res.status(500).json({ error: 'Failed to create checkout session' });
+        console.error('Stripe Session Error:', error);
+        res.status(500).json({
+            error: 'Failed to create checkout session',
+            details: error.message,
+            code: error.code // Include Stripe error code if available
+        });
     }
 });
 

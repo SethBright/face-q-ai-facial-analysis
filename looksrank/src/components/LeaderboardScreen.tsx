@@ -24,7 +24,7 @@ export const LeaderboardScreen: React.FC = () => {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, username, coins, best_today, best_weekly, best_all_time, tier')
+            .select('id, username, coins, best_today, best_weekly, best_all_time, tier, avatar_url')
             .gt(column, 0) // Only show users who have done a rating
             .order(column, { ascending: false })
             .limit(500); // Show top 500
@@ -91,8 +91,20 @@ export const LeaderboardScreen: React.FC = () => {
                                             idx + 1}
                             </div>
 
-                            <div className="w-12 h-12 rounded-full border border-white/10 bg-dark-900 flex items-center justify-center font-black text-primary-500 text-sm overflow-hidden">
-                                {entry.username.substring(0, 2).toUpperCase()}
+                            <div className="w-12 h-12 rounded-full border border-white/10 bg-dark-900 flex items-center justify-center font-black text-primary-500 text-sm overflow-hidden shrink-0">
+                                {entry.avatar_url ? (
+                                    <img
+                                        src={entry.avatar_url}
+                                        alt={entry.username}
+                                        className="w-full h-full object-cover animate-in fade-in duration-500"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                            (e.target as HTMLImageElement).parentElement!.innerText = entry.username.substring(0, 2).toUpperCase();
+                                        }}
+                                    />
+                                ) : (
+                                    entry.username.substring(0, 2).toUpperCase()
+                                )}
                             </div>
 
                             <div className="flex-1 overflow-hidden">
