@@ -1,8 +1,8 @@
-import express from 'express';
-import type { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import multer from 'multer';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import cron from 'node-cron';
 import Stripe from 'stripe';
@@ -14,8 +14,8 @@ const port = process.env.PORT || 3001;
 
 // Initialize Gemini SDK
 const genaiKey = process.env.GEMINI_API_KEY;
-const ai = genaiKey ? new GoogleGenAI({ apiKey: genaiKey }) : null;
-if (!ai) console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
+const genAI = genaiKey ? new GoogleGenerativeAI(genaiKey) : null;
+if (!genAI) console.warn("WARNING: GEMINI_API_KEY is missing. AI analysis will fail.");
 
 // Initialize Supabase Admin Client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -100,7 +100,7 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({
         status: 'ok',
         config: {
-            hasGemini: !!ai,
+            hasGemini: !!genAI,
             hasSupabase: !!supabaseAdmin,
             hasStripe: !!stripe,
             hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET
@@ -124,9 +124,11 @@ app.post('/api/rank', async (req: Request, res: Response) => {
         const mimeType = matches[1];
         const base64Data = matches[2];
 
-        if (!ai) {
+        if (!genAI) {
             return res.status(500).json({ error: 'AI Backend not configured (missing API Key)' });
         }
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         // 2. The single-face & scoring prompt
         const prompt = `
@@ -166,21 +168,19 @@ USER FEEDBACK: The previous scoring was too lenient.NERF the ratings.
 Be brutally honest, but precise.Analyze the image and return ONLY the JSON.
 `;
 
-        // 3. Call Gemini 2.5 Flash
-        const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
-            contents: [
-                prompt,
-                {
-                    inlineData: {
-                        mimeType,
-                        data: base64Data
-                    }
+        // 3. Call Gemini 1.5 Flash
+        const result = await model.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    mimeType,
+                    data: base64Data
                 }
-            ]
-        });
+            }
+        ]);
 
-        const rawText = response.text || '';
+        const responseData = await result.response;
+        const rawText = responseData.text();
 
         // Clean up markdown code blocks if gemini returns them despite instructions
         const cleanedText = rawText.replace(/```json\n ? /g, '').replace(/```\n?/g, '').trim();
