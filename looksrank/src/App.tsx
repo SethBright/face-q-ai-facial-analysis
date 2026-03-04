@@ -7,7 +7,7 @@ import { RankScreen } from './components/RankScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
 import { DuelScreen } from './components/DuelScreen';
 import { InboxScreen } from './components/InboxScreen';
-import { OnboardingModal } from './components/OnboardingModal';
+import { AuthScreen } from './components/AuthScreen';
 import { LegalModal } from './components/LegalModal';
 import { CookieConsent } from './components/CookieConsent';
 import { NotFound } from './components/NotFound';
@@ -42,7 +42,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-dark-900 text-white font-sans flex flex-col select-none [-webkit-tap-highlight-color:transparent]">
-      {!displayName && <OnboardingModal />}
+      {!displayName && <AuthScreen />}
       <CookieConsent />
 
       <div className="max-w-md mx-auto w-full relative min-h-screen flex flex-col shadow-2xl bg-dark-800/20">

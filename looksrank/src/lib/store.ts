@@ -33,7 +33,9 @@ interface AppState {
     deductCoins: (amount: number) => Promise<void>;
     updateBestScores: (score: number, image?: string) => Promise<void>;
     initializeAuth: () => Promise<void>;
-    createProfile: (name: string) => Promise<{ success: boolean; error?: string }>;
+    signUp: (handle: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    logIn: (handle: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    logOut: () => Promise<void>;
     challenges: Challenge[];
     fetchChallenges: () => Promise<void>;
     subscribeToChallenges: () => () => void;
@@ -177,23 +179,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ lastViewedInbox: now });
     },
     initializeAuth: async () => {
-        console.log("Initializing Auth...");
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) console.error("Session error:", error);
 
         if (session?.user) {
-            console.log("Found session for user:", session.user.id);
-            // Load their profile
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('id', session.user.id)
+                .eq('auth_id', session.user.id)
                 .single();
 
             if (profile) {
                 set({
-                    userId: session.user.id,
-                    displayName: profile.username,
+                    userId: profile.id, // The handle
+                    displayName: profile.id, // The handle
                     coins: profile.coins,
                     bestToday: profile.best_today || 0,
                     bestWeekly: profile.best_weekly || 0,
@@ -205,48 +204,40 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         set({ isInitialized: true });
     },
-    createProfile: async (name: string) => {
+
+    // Authenticate using the phantom email trick
+    signUp: async (handle: string, password: string) => {
         try {
-            // Use Anonymous Sign-In for the most frictionless experience.
-            // Note: User must enable 'Allow Anonymous Sign-ins' in Supabase Dashboard -> Auth -> Providers
-            let { data: authData, error: fetchError } = await supabase.auth.signInAnonymously();
+            const phantomEmail = `${handle.toLowerCase()}@handles.looksrank.internal`;
 
-            if (fetchError) {
-                // If Anonymous sign-in is disabled, fallback to a more "valid" looking fake email
-                if (fetchError.message.toLowerCase().includes('disabled')) {
-                    const fakeEmail = `user-${Math.random().toString(36).substring(2, 11)}@example.com`;
-                    const fakePassword = Math.random().toString(36).substring(2, 11);
-                    const { data: retryData, error: retryError } = await supabase.auth.signUp({
-                        email: fakeEmail,
-                        password: fakePassword,
-                    });
-                    if (retryError) throw retryError;
-                    authData = retryData;
-                } else {
-                    throw fetchError;
-                }
-            }
+            // 1. Sign up with Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: phantomEmail,
+                password: password,
+            });
 
-            if (!authData?.user) throw new Error("Failed to create user");
+            if (authError) throw new Error(authError.message);
+            if (!authData?.user) throw new Error("Failed to create user account.");
 
-            // Create profile
+            // 2. Create the associated public profile
             const { error: profileError } = await supabase.from('profiles').insert({
-                id: authData.user.id,
-                username: name,
-                coins: 20,
+                id: handle, // The primary key is the handle
+                auth_id: authData.user.id, // Link to the secure auth user
+                coins: 20, // Starting balance
                 best_today: 0,
                 best_weekly: 0,
                 best_all_time: 0
             });
 
             if (profileError) {
-                // E.g. unique constraint violation
-                return { success: false, error: profileError.message };
+                // If profile creation fails (e.g. handle taken but auth email didn't exist yet, which shouldn't happen but just in case)
+                throw new Error("Handle may already be taken, or database error.");
             }
 
+            // 3. Update local state
             set({
-                userId: authData.user.id,
-                displayName: name,
+                userId: handle,
+                displayName: handle,
                 coins: 20,
                 bestToday: 0,
                 bestWeekly: 0,
@@ -254,8 +245,65 @@ export const useAppStore = create<AppState>((set, get) => ({
             });
 
             return { success: true };
-        } catch (error: unknown) {
-            return { success: false, error: (error as Error).message || 'Unknown error occurred' };
+        } catch (error: any) {
+            return { success: false, error: error.message || 'Unknown error occurred' };
         }
+    },
+
+    logIn: async (handle: string, password: string) => {
+        try {
+            const phantomEmail = `${handle.toLowerCase()}@handles.looksrank.internal`;
+
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email: phantomEmail,
+                password: password,
+            });
+
+            if (authError) {
+                if (authError.message.includes("Invalid login credentials")) {
+                    throw new Error("Incorrect password or handle does not exist.");
+                }
+                throw new Error(authError.message);
+            }
+            if (!authData?.user) throw new Error("Failed to log in.");
+
+            // Profile will be loaded via onAuthStateChange in App.tsx, but we can load it here too for immediate UI response
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('auth_id', authData.user.id)
+                .single();
+
+            if (profileError || !profile) {
+                throw new Error("Could not load user profile.");
+            }
+
+            set({
+                userId: profile.id,
+                displayName: profile.id,
+                coins: profile.coins,
+                bestToday: profile.best_today || 0,
+                bestWeekly: profile.best_weekly || 0,
+                bestAllTime: profile.best_all_time || 0,
+                avatarUrl: profile.avatar_url
+            });
+
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message || 'Unknown error occurred' };
+        }
+    },
+
+    logOut: async () => {
+        await supabase.auth.signOut();
+        set({
+            userId: null,
+            displayName: null,
+            coins: 0,
+            bestToday: 0,
+            bestWeekly: 0,
+            bestAllTime: 0,
+            avatarUrl: null
+        });
     }
 }));
