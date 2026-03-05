@@ -12,7 +12,7 @@ export interface Challenge {
     winner_id: string | null;
     created_at: string;
     profiles?: {
-        username: string;
+        id: string;
         best_today: number;
     };
 }
@@ -152,14 +152,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Fetch received challenges (where we are the target)
         const { data: received, error: rError } = await supabase
             .from('challenges')
-            .select('*, profiles!challenges_challenger_id_fkey(username, best_today)')
+            .select('*, profiles!challenges_challenger_id_fkey(id, best_today)')
             .eq('target_id', state.userId)
             .order('created_at', { ascending: false });
 
         // Fetch sent challenges (where we are the challenger)
         const { data: sent, error: sError } = await supabase
             .from('challenges')
-            .select('*, profiles!challenges_target_id_fkey(username, best_today)')
+            .select('*, profiles!challenges_target_id_fkey(id, best_today)')
             .eq('challenger_id', state.userId)
             .order('created_at', { ascending: false });
 

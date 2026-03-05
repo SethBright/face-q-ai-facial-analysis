@@ -106,7 +106,7 @@ export const InboxScreen: React.FC = () => {
 
                 <div className="text-center">
                     <h2 className="text-xl font-black uppercase tracking-wider text-red-500 flex justify-center items-center gap-2">
-                        <Swords className="w-5 h-5" /> Versus {activeChallenge.profiles?.username || 'Player'}
+                        <Swords className="w-5 h-5" /> Versus {activeChallenge.profiles?.id || 'Player'}
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">You must score higher than <strong className="text-white text-lg">{activeChallenge.profiles?.best_today || 0}</strong></p>
                 </div>
@@ -162,7 +162,7 @@ export const InboxScreen: React.FC = () => {
                             <div className="flex justify-between items-start relative z-10">
                                 <div>
                                     <div className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Challenged by</div>
-                                    <div className="font-black text-xl text-white">{challenge.profiles?.username || 'Player'}</div>
+                                    <div className="font-black text-xl text-white">{challenge.profiles?.id || 'Player'}</div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Target Score</div>
@@ -198,7 +198,7 @@ export const InboxScreen: React.FC = () => {
                         <div key={challenge.id} className="glass-panel p-4 rounded-2xl flex items-center justify-between border border-white/10 bg-white/5 opacity-80">
                             <div>
                                 <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Waiting for</div>
-                                <div className="font-bold text-white">{challenge.profiles?.username || 'Player'}</div>
+                                <div className="font-bold text-white">{challenge.profiles?.id || 'Player'}</div>
                             </div>
                             <div className="flex flex-col items-end">
                                 <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Wager</div>
@@ -218,7 +218,7 @@ export const InboxScreen: React.FC = () => {
                         {pastChallenges.map(c => (
                             <div key={c.id} className="bg-dark-800 p-3 rounded-xl border border-white/5 flex items-center justify-between opacity-80">
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-bold truncate">vs {c.profiles?.username || 'Player'}</span>
+                                    <span className="text-sm font-bold truncate">vs {c.profiles?.id || 'Player'}</span>
                                     <span className="text-xs text-gray-500 uppercase tracking-widest font-mono">
                                         {c.status === 'declined' ? 'Declined' : c.winner_id === userId ? 'Won' : 'Lost'}
                                     </span>
