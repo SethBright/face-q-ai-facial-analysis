@@ -18,9 +18,9 @@ export const RankScreen: React.FC = () => {
     const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
 
     React.useEffect(() => {
-        setIsCameraActive(isScanning || !!result);
+        setIsCameraActive(!!result);
         return () => setIsCameraActive(false);
-    }, [isScanning, result, setIsCameraActive]);
+    }, [result, setIsCameraActive]);
 
     // For sharing
     const resultRef = useRef<HTMLDivElement>(null);
@@ -114,7 +114,7 @@ export const RankScreen: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 p-4 pt-8 animate-in fade-in zoom-in duration-300">
+        <div className="flex flex-col gap-4 p-4 pt-4 animate-in fade-in zoom-in duration-300">
 
             {/* Target user info */}
             <div className="flex flex-col gap-2">
@@ -125,7 +125,7 @@ export const RankScreen: React.FC = () => {
 
             {/* Camera Card */}
             <div className={clsx(
-                "relative aspect-[3/4] flex flex-col items-center justify-center border-2 border-white/5 shadow-2xl transition-all duration-500",
+                "relative aspect-square flex flex-col items-center justify-center border-2 border-white/5 shadow-2xl transition-all duration-500",
                 !result ? "glass-panel overflow-hidden" : "bg-dark-950/20 backdrop-blur-none border-transparent shadow-none"
             )}>
                 {isScanning ? (
