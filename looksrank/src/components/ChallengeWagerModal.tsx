@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { X, Swords, Coins, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -24,6 +24,14 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
     const [phase, setPhase] = useState<'wager' | 'camera'>('wager');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const cameraRef = useRef<CameraHandle>(null);
+
+    useEffect(() => {
+        const originalStyle = window.getComputedStyle(document.body).overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = originalStyle;
+        };
+    }, []);
 
     const maxWager = Math.max(4, Math.min(coins, 500));
 
