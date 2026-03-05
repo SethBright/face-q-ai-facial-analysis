@@ -43,6 +43,8 @@ interface AppState {
     subscribeToChallenges: () => () => void;
     lastViewedInbox: string | null;
     markInboxAsRead: () => void;
+    isCameraActive: boolean;
+    setIsCameraActive: (active: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -196,6 +198,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         localStorage.setItem('lastViewedInbox', now);
         set({ lastViewedInbox: now });
     },
+    isCameraActive: false,
+    setIsCameraActive: (active: boolean) => set({ isCameraActive: active }),
     initializeAuth: async () => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) console.error("Session error:", error);

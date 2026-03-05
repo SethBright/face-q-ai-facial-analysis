@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { useAppStore } from './lib/store';
+import clsx from 'clsx';
 
 import { RankScreen } from './components/RankScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
@@ -11,11 +12,11 @@ import { AuthScreen } from './components/AuthScreen';
 import { LegalModal } from './components/LegalModal';
 import { CookieConsent } from './components/CookieConsent';
 import { NotFound } from './components/NotFound';
-import { useState } from 'react';
 
 function App() {
   const isInitialized = useAppStore((state) => state.isInitialized);
   const activeTab = useAppStore((state) => state.activeTab);
+  const isCameraActive = useAppStore((state) => state.isCameraActive);
   const displayName = useAppStore((state) => state.displayName);
   const [is404, setIs404] = useState(window.location.pathname !== '/');
   const [legalType, setLegalType] = useState<'privacy' | 'terms' | 'support' | null>(null);
@@ -46,9 +47,9 @@ function App() {
       <CookieConsent />
 
       <div className="max-w-md mx-auto w-full relative min-h-screen flex flex-col shadow-2xl bg-dark-800/20">
-        <TopBar />
+        {!isCameraActive && <TopBar />}
 
-        <main className="flex-1 overflow-y-auto pb-4 relative z-0 hide-scrollbar flex flex-col">
+        <main className={clsx("flex-1 overflow-y-auto pb-4 relative z-0 hide-scrollbar flex flex-col", isCameraActive && "pt-0 pb-0")}>
           <div className="flex-1">
             {activeTab === 'rank' && <RankScreen />}
             {activeTab === 'leaderboard' && <LeaderboardScreen />}
@@ -56,17 +57,18 @@ function App() {
             {activeTab === 'inbox' && <InboxScreen />}
           </div>
 
-          {/* Subtle Footer Links */}
-          <div className="mt-8 mb-24 px-6 flex justify-center gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">
-            <button onClick={() => setLegalType('privacy')} className="hover:text-white transition-colors">Privacy</button>
-            <span>•</span>
-            <button onClick={() => setLegalType('terms')} className="hover:text-white transition-colors">Terms</button>
-            <span>•</span>
-            <button onClick={() => setLegalType('support')} className="hover:text-white transition-colors">Support</button>
-          </div>
+          {!isCameraActive && (
+            <div className="mt-8 mb-24 px-6 flex justify-center gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">
+              <button onClick={() => setLegalType('privacy')} className="hover:text-white transition-colors">Privacy</button>
+              <span>•</span>
+              <button onClick={() => setLegalType('terms')} className="hover:text-white transition-colors">Terms</button>
+              <span>•</span>
+              <button onClick={() => setLegalType('support')} className="hover:text-white transition-colors">Support</button>
+            </div>
+          )}
         </main>
 
-        <BottomNav />
+        {!isCameraActive && <BottomNav />}
       </div>
 
       {legalType && (

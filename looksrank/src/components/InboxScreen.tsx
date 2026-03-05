@@ -31,6 +31,12 @@ export const InboxScreen: React.FC = () => {
     const [activeChallengeId, setActiveChallengeId] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const cameraRef = useRef<CameraHandle>(null);
+    const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
+
+    useEffect(() => {
+        setIsCameraActive(!!activeChallengeId);
+        return () => setIsCameraActive(false);
+    }, [activeChallengeId, setIsCameraActive]);
 
     const activeChallenge = challenges.find(c => c.id === activeChallengeId);
 

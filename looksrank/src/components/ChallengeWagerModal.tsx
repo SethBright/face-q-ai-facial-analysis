@@ -24,14 +24,20 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
     const [phase, setPhase] = useState<'wager' | 'camera'>('wager');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const cameraRef = useRef<CameraHandle>(null);
+    const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
+
+    useEffect(() => {
+        setIsCameraActive(phase === 'camera');
+    }, [phase, setIsCameraActive]);
 
     useEffect(() => {
         const originalStyle = window.getComputedStyle(document.body).overflow;
         document.body.style.overflow = 'hidden';
         return () => {
             document.body.style.overflow = originalStyle;
+            setIsCameraActive(false);
         };
-    }, []);
+    }, [setIsCameraActive]);
 
     const maxWager = Math.max(4, Math.min(coins, 500));
 

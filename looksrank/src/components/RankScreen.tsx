@@ -15,6 +15,12 @@ export const RankScreen: React.FC = () => {
     const cameraRef = useRef<CameraHandle>(null);
     const [stakeAmount, setStakeAmount] = useState<number>(4);
     const [scanError, setScanError] = useState<string | null>(null);
+    const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
+
+    React.useEffect(() => {
+        setIsCameraActive(isScanning || !!result);
+        return () => setIsCameraActive(false);
+    }, [isScanning, result, setIsCameraActive]);
 
     // For sharing
     const resultRef = useRef<HTMLDivElement>(null);

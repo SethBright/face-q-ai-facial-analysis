@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { rankFace } from '../lib/api';
 import type { RankResult } from '../lib/api';
@@ -25,6 +25,12 @@ export const DuelScreen: React.FC = () => {
     // For sharing
     const duelResultRef = useRef<HTMLDivElement>(null);
     const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+    const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
+
+    useEffect(() => {
+        setIsCameraActive(step > 1);
+        return () => setIsCameraActive(false);
+    }, [step, setIsCameraActive]);
 
     const coins = useAppStore(state => state.coins);
     const deductCoins = useAppStore(state => state.deductCoins);
