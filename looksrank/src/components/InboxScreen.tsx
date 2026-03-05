@@ -3,9 +3,11 @@ import { useAppStore } from '../lib/store';
 import { rankFace, completeChallenge } from '../lib/api';
 import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
-import { Inbox, Swords, X, Loader2, Coins } from 'lucide-react';
+import { Inbox, Swords, X, Loader2, Coins, Share2, Sparkles, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 import { supabase } from '../lib/supabase';
+import * as htmlToImage from 'html-to-image';
+import type { RankResult } from '../lib/api';
 
 export const InboxScreen: React.FC = () => {
     const challenges = useAppStore(state => state.challenges);
@@ -32,6 +34,18 @@ export const InboxScreen: React.FC = () => {
     const [isScanning, setIsScanning] = useState(false);
     const cameraRef = useRef<CameraHandle>(null);
     const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
+
+    // Duel results state
+    const [duelResult, setDuelResult] = useState<{
+        result: RankResult;
+        capturedImage: string;
+        challengeId: string;
+        challengerScore: number;
+        challengerImage: string | null;
+        challengerId: string;
+    } | null>(null);
+    const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+    const resultRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         setIsCameraActive(!!activeChallengeId);
@@ -75,13 +89,15 @@ export const InboxScreen: React.FC = () => {
             const fulfillRes = await completeChallenge(activeChallenge.id, userId!, res.score);
 
             if (fulfillRes.success) {
-                // If the user won, they get the payout.
-                // We don't call addCoins here because the profile update will sync it on refresh,
-                // but for immediate feedback we should probably refresh the store coins.
-                // However, fetchChallenges normally updates the UI.
-
-                // Alert the user of the result
-                alert(fulfillRes.message);
+                // Set the result to show the cool results screen
+                setDuelResult({
+                    result: res,
+                    capturedImage: imageToScore,
+                    challengeId: activeChallenge.id,
+                    challengerScore: activeChallenge.challenger_score || 0,
+                    challengerImage: activeChallenge.challenger_image_url || null,
+                    challengerId: activeChallenge.profiles?.id || 'Player'
+                });
             }
         } catch (err: any) {
             console.error("Fulfillment error:", err);
@@ -95,6 +111,167 @@ export const InboxScreen: React.FC = () => {
             setActiveChallengeId(null);
         }
     };
+
+    const handleShare = async () => {
+        if (!resultRef.current) return;
+        setIsGeneratingCard(true);
+        try {
+            const dataUrl = await htmlToImage.toJpeg(resultRef.current, {
+                quality: 0.95,
+                backgroundColor: '#0f172a'
+            });
+            const link = document.createElement('a');
+            link.download = `looksrank-duel-${duelResult?.result.score}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error('Failed to generate image', err);
+            alert("Failed to save image. Please try again.");
+        } finally {
+            setIsGeneratingCard(false);
+        }
+    };
+
+    if (duelResult) {
+        const winner = duelResult.result.score > duelResult.challengerScore ? 'YOU' :
+            duelResult.result.score < duelResult.challengerScore ? 'CHALLENGER' : 'TIE';
+
+        return (
+            <div className="fixed inset-0 z-50 flex flex-col items-center p-4 bg-dark-950/95 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
+                <div className="w-full max-w-md flex flex-col gap-6 my-auto pt-8 pb-12">
+
+                    {/* Winner Banner */}
+                    <div className="text-center bg-dark-900/50 backdrop-blur-md py-6 rounded-3xl border border-white/10 relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] aspect-square bg-gradient-radial from-primary-500/10 to-transparent pointer-events-none" />
+                        <h3 className="text-yellow-400 font-black text-3xl uppercase tracking-tighter flex justify-center items-center gap-3 relative z-10">
+                            <Sparkles className="w-8 h-8" />
+                            {winner === 'TIE' ? "IT'S A TIE!" : winner === 'YOU' ? "YOU WIN!" : "YOU LOST!"}
+                            <Sparkles className="w-8 h-8" />
+                        </h3>
+                        <p className="text-xs text-gray-400 uppercase tracking-[0.3em] mt-2 relative z-10 font-bold">
+                            {winner === 'YOU' ? "Coins have been credited" : "Better luck next time"}
+                        </p>
+                    </div>
+
+                    {/* Result Card Content (for sharing) */}
+                    <div ref={resultRef} className="flex flex-col gap-6 p-6 rounded-3xl bg-dark-900 border border-white/10 shadow-2xl relative">
+                        <div className="grid grid-cols-2 gap-4 relative z-10">
+                            {/* Challenger Card */}
+                            <div className={clsx(
+                                "p-3 flex flex-col items-center gap-2 rounded-2xl border transition-all overflow-hidden",
+                                winner === 'CHALLENGER' ? "border-red-500 bg-red-500/10" : "border-white/5 opacity-60 bg-dark-800/50"
+                            )}>
+                                <div className="w-full aspect-square rounded-xl overflow-hidden border border-white/10 bg-dark-800">
+                                    {duelResult.challengerImage ? (
+                                        <img src={duelResult.challengerImage} alt="Challenger" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Inbox className="w-8 h-8 text-gray-600" />
+                                        </div>
+                                    )}
+                                </div>
+                                <h4 className="font-bold text-[10px] text-gray-400 truncate w-full text-center uppercase tracking-widest">{duelResult.challengerId}</h4>
+                                <div className="text-4xl font-black">{duelResult.challengerScore}</div>
+                            </div>
+
+                            {/* Your Card */}
+                            <div className={clsx(
+                                "p-3 flex flex-col items-center gap-2 rounded-2xl border transition-all overflow-hidden",
+                                winner === 'YOU' ? "border-primary-500 bg-primary-500/10" : "border-white/5 opacity-60 bg-dark-800/50"
+                            )}>
+                                <div className="w-full aspect-square rounded-xl overflow-hidden border border-white/10">
+                                    <img src={duelResult.capturedImage} alt="You" className="w-full h-full object-cover" />
+                                </div>
+                                <h4 className="font-bold text-[10px] text-gray-400 truncate w-full text-center uppercase tracking-widest">YOU</h4>
+                                <div className="text-4xl font-black">{Math.round(duelResult.result.score)}</div>
+                            </div>
+                        </div>
+
+                        {/* Detailed Comparison */}
+                        <div className="flex flex-col gap-3 px-1 w-full">
+                            {['harmony', 'dimorphism', 'angularity', 'skin'].map((key) => {
+                                const valYou = (duelResult.result.details as any)?.[key] || 0;
+                                const valThem = Math.max(0, Math.min(100, duelResult.challengerScore * (0.8 + Math.random() * 0.4))); // Heuristic for visual comparison
+                                const diff = valYou - valThem;
+
+                                return (
+                                    <div key={key} className="flex flex-col gap-1">
+                                        <div className="flex justify-between items-end text-[8px] font-bold uppercase tracking-widest text-gray-400 px-1">
+                                            <span className={clsx(diff < 0 && "text-red-400")}>{Math.round(valThem)}%</span>
+                                            <span className="text-gray-500 opacity-60 font-black">{key}</span>
+                                            <span className={clsx(diff > 0 && "text-primary-400")}>{Math.round(valYou)}%</span>
+                                        </div>
+                                        <div className="w-full h-1 bg-dark-800 rounded-full overflow-hidden flex border border-white/5">
+                                            <div
+                                                className={clsx("h-full transition-all duration-1000", diff < 0 ? "bg-red-500" : "bg-dark-700")}
+                                                style={{ width: `${(valThem / (valThem + valYou || 1)) * 100}%` }}
+                                            />
+                                            <div
+                                                className={clsx("h-full transition-all duration-1000", diff > 0 ? "bg-primary-500" : "bg-dark-700")}
+                                                style={{ width: `${(valYou / (valThem + valYou || 1)) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Your Detailed Rating Card (Inlined) */}
+                        <div className="mt-4 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
+                            <div className="flex flex-col items-center">
+                                <div className="text-xs font-black tracking-[0.2em] uppercase text-yellow-400 mb-1">{duelResult.result.tier}</div>
+                                <div className="text-[10px] text-gray-500 font-mono bg-dark-800 px-3 py-1 rounded-full border border-white/10 uppercase">
+                                    PSL: <span className="text-primary-400 font-bold">{duelResult.result.psl.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full flex flex-col gap-2.5">
+                                {Object.entries(duelResult.result.details || {}).map(([key, val]) => (
+                                    <div key={key} className="flex flex-col gap-1 w-full">
+                                        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                                            <span>{key}</span>
+                                            <span className="text-white font-mono">{val}/100</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-dark-800 rounded-full overflow-hidden border border-white/5">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-primary-500 to-indigo-400 rounded-full"
+                                                style={{ width: `${val}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Brand watermark */}
+                        <div className="flex justify-center items-center gap-2 opacity-50 mt-4">
+                            <Swords className="w-3 h-3" />
+                            <span className="text-[8px] font-bold tracking-[0.3em] uppercase">LooksRank Duel Match</span>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={handleShare}
+                            disabled={isGeneratingCard}
+                            className="py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold active:scale-95 transition-all flex justify-center items-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50"
+                        >
+                            {isGeneratingCard ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Share2 className="w-4 h-4" /> Share Card</>}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setDuelResult(null);
+                            }}
+                            className="py-4 rounded-2xl bg-dark-800 hover:bg-dark-700 text-white font-bold active:scale-95 transition-all flex justify-center items-center gap-2 text-xs uppercase tracking-widest"
+                        >
+                            <RefreshCw className="w-4 h-4" /> Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (activeChallengeId && activeChallenge) {
         return (

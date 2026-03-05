@@ -56,7 +56,34 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
             // 1. Analyze the face FIRST (so we don't charge if it fails)
             const res = await rankFace(image);
 
-            // 2. Insert into Supabase with the new score
+            // 2. Upload the selfie to Supabase Storage
+            let publicUrl = null;
+            try {
+                const base64Data = image.split(',')[1];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+                const fileName = `challenge_${userId}_${Date.now()}.jpg`;
+                const { error: uploadError } = await supabase.storage
+                    .from('selfies')
+                    .upload(fileName, blob);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl: url } } = supabase.storage
+                    .from('selfies')
+                    .getPublicUrl(fileName);
+                publicUrl = url;
+            } catch (err) {
+                console.error("Selfie upload failed, proceeding with score only:", err);
+            }
+
+            // 3. Insert into Supabase with the new score and image
             const { error } = await supabase
                 .from('challenges')
                 .insert({
@@ -64,6 +91,7 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                     target_id: targetId,
                     wager: wager,
                     challenger_score: res.score,
+                    challenger_image_url: publicUrl,
                     status: 'pending'
                 });
 
