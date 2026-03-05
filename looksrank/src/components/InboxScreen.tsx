@@ -101,7 +101,7 @@ export const InboxScreen: React.FC = () => {
                     <h2 className="text-xl font-black uppercase tracking-wider text-red-500 flex justify-center items-center gap-2">
                         <Swords className="w-5 h-5" /> Versus {activeChallenge.profiles?.id || 'Player'}
                     </h2>
-                    <p className="text-gray-400 text-sm mt-1">You must score higher than <strong className="text-white text-lg">{activeChallenge.profiles?.best_today || 0}</strong></p>
+                    <p className="text-gray-400 text-sm mt-1">You must score higher than <strong className="text-white text-lg">{activeChallenge.challenger_score || 0}</strong></p>
                 </div>
 
                 <div className="glass-panel p-4 flex justify-between items-center rounded-2xl border border-yellow-500/30 bg-yellow-500/5">
@@ -159,7 +159,7 @@ export const InboxScreen: React.FC = () => {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Target Score</div>
-                                    <div className="font-black text-2xl text-red-400">{challenge.profiles?.best_today || 0}</div>
+                                    <div className="font-black text-2xl text-red-400">{challenge.challenger_score || 0}</div>
                                 </div>
                             </div>
 

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../lib/store';
-import { X, Swords, Coins } from 'lucide-react';
+import { X, Swords, Coins, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { CameraOverlay } from './CameraOverlay';
+import type { CameraHandle } from './CameraOverlay';
+import { rankFace } from '../lib/api';
 
 interface ChallengeWagerModalProps {
     targetId: string;
@@ -17,25 +20,41 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
     const fetchChallenges = useAppStore(state => state.fetchChallenges);
     const [wager, setWager] = useState<number>(10);
     const [isSent, setIsSent] = useState(false);
+    const [phase, setPhase] = useState<'wager' | 'camera'>('wager');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const cameraRef = useRef<CameraHandle>(null);
 
     const maxWager = Math.max(4, Math.min(coins, 500));
 
     const handleSendChallenge = async () => {
-        if (coins < wager || !userId) return;
+        if (coins < wager || !userId || !cameraRef.current) return;
+
+        const image = cameraRef.current.capture();
+        if (!image) {
+            alert("Please allow camera access to capture your selfie!");
+            return;
+        }
+
+        setIsAnalyzing(true);
 
         try {
-            // Actually insert into Supabase
+            // 1. Analyze the face FIRST (so we don't charge if it fails)
+            const res = await rankFace(image);
+
+            // 2. Insert into Supabase with the new score
             const { error } = await supabase
                 .from('challenges')
                 .insert({
                     challenger_id: userId,
                     target_id: targetId,
                     wager: wager,
+                    challenger_score: res.score,
                     status: 'pending'
                 });
 
             if (error) throw error;
 
+            // 3. Deduct coins ONLY after everything succeeded
             await deductCoins(wager);
             setIsSent(true);
 
@@ -45,7 +64,9 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                 onClose();
             }, 2000);
         } catch (err: any) {
-            alert("Failed to send challenge: " + err.message);
+            alert(err.message || "Failed to send challenge");
+        } finally {
+            setIsAnalyzing(false);
         }
     };
 
@@ -82,63 +103,92 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 p-4 bg-dark-800/80 rounded-2xl border border-white/5 shadow-inner">
-                            <div className="flex justify-between items-center text-sm font-bold text-gray-300">
-                                <span className="uppercase tracking-widest text-[10px] text-gray-500">Wager Amount</span>
-                                <span className="flex items-center gap-1 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full"><Coins className="w-3 h-3" /> {wager}</span>
-                            </div>
+                        {phase === 'wager' ? (
+                            <>
+                                <div className="flex flex-col gap-3 p-4 bg-dark-800/80 rounded-2xl border border-white/5 shadow-inner">
+                                    <div className="flex justify-between items-center text-sm font-bold text-gray-300">
+                                        <span className="uppercase tracking-widest text-[10px] text-gray-500">Wager Amount</span>
+                                        <span className="flex items-center gap-1 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full"><Coins className="w-3 h-3" /> {wager}</span>
+                                    </div>
 
-                            <input
-                                type="range"
-                                min="4"
-                                max={maxWager}
-                                step="1"
-                                value={wager}
-                                onChange={(e) => setWager(Number(e.target.value))}
-                                className="w-full h-2 bg-dark-900 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                                disabled={coins < 4}
-                            />
+                                    <input
+                                        type="range"
+                                        min="4"
+                                        max={maxWager}
+                                        step="1"
+                                        value={wager}
+                                        onChange={(e) => setWager(Number(e.target.value))}
+                                        className="w-full h-2 bg-dark-900 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                                        disabled={coins < 4}
+                                    />
 
-                            <div className="grid grid-cols-4 gap-2">
-                                {[10, 50, 100, maxWager].map((amt, i) => (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[10, 50, 100, maxWager].map((amt, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setWager(Math.max(4, amt))}
+                                                disabled={coins < amt}
+                                                className="py-2 ml-0.5 mr-0.5 rounded-lg bg-dark-900 border border-white/5 text-xs font-mono text-gray-400 hover:text-yellow-400 hover:border-yellow-500/30 transition-colors disabled:opacity-30 disabled:hover:border-white/5 disabled:hover:text-gray-400"
+                                            >
+                                                {i === 3 ? 'MAX' : amt}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex flex-col gap-1 mt-2">
+                                        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest flex justify-between">
+                                            <span>Your Bet: {wager}</span>
+                                            <span>Opponent Match: {wager}</span>
+                                        </div>
+                                        <div className="text-[10px] text-primary-400 font-black text-center mt-1">
+                                            TOTAL POT: {wager * 2} COINS
+                                        </div>
+                                    </div>
+
+                                    {coins < 4 && (
+                                        <div className="text-xs text-red-400 text-center font-bold mt-2">Not enough coins to challenge</div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => setPhase('camera')}
+                                    disabled={coins < wager}
+                                    className="w-full mt-4 py-4 rounded-xl primary-gradient text-white font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-lg shadow-primary-500/20"
+                                >
+                                    Next: Take Selfie
+                                </button>
+                            </>
+                        ) : (
+                            <div className="flex flex-col gap-4 animate-in slide-in-from-right duration-300">
+                                <div className="relative aspect-[3/4] glass-panel overflow-hidden border-2 border-primary-500/30 shadow-2xl rounded-2xl">
+                                    {isAnalyzing && (
+                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-dark-900/80 backdrop-blur-sm animate-in fade-in">
+                                            <Loader2 className="w-12 h-12 text-primary-500 animate-spin" />
+                                            <p className="font-bold text-xs tracking-[0.2em] uppercase text-white">Analyzing...</p>
+                                        </div>
+                                    )}
+                                    <CameraOverlay ref={cameraRef} isScanning={isAnalyzing} onCapture={() => { }} />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        key={i}
-                                        onClick={() => setWager(Math.max(4, amt))}
-                                        disabled={coins < amt}
-                                        className="py-2 ml-0.5 mr-0.5 rounded-lg bg-dark-900 border border-white/5 text-xs font-mono text-gray-400 hover:text-yellow-400 hover:border-yellow-500/30 transition-colors disabled:opacity-30 disabled:hover:border-white/5 disabled:hover:text-gray-400"
+                                        onClick={() => setPhase('wager')}
+                                        disabled={isAnalyzing}
+                                        className="py-4 rounded-xl bg-dark-800 text-gray-400 font-bold uppercase text-xs tracking-widest border border-white/5 active:scale-95 transition-all"
                                     >
-                                        {i === 3 ? 'MAX' : amt}
+                                        Back
                                     </button>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-col gap-1 mt-2">
-                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest flex justify-between">
-                                    <span>Your Bet: {wager}</span>
-                                    <span>Opponent Match: {wager}</span>
+                                    <button
+                                        onClick={handleSendChallenge}
+                                        disabled={isAnalyzing}
+                                        className="py-4 rounded-xl primary-gradient text-white font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-primary-500/20 active:scale-95 transition-all flex justify-center items-center gap-2"
+                                    >
+                                        {isAnalyzing ? 'SENDING...' : `SEND (-${wager})`}
+                                    </button>
                                 </div>
-                                <div className="text-[10px] text-primary-400 font-black text-center mt-1">
-                                    TOTAL POT: {wager * 2} COINS
-                                </div>
+                                <p className="text-[10px] text-center text-gray-500 font-bold uppercase tracking-widest">Coins deducted only after scan</p>
                             </div>
-
-                            {coins < 4 && (
-                                <div className="text-xs text-red-400 text-center font-bold mt-2">Not enough coins to challenge</div>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={handleSendChallenge}
-                            disabled={coins < wager}
-                            className="w-full mt-4 py-4 rounded-xl primary-gradient text-white font-black active:scale-95 transition-all disabled:opacity-50 flex flex-col items-center justify-center leading-tight shadow-lg shadow-primary-500/20"
-                        >
-                            <span className="flex items-center gap-1 uppercase tracking-wider text-sm">
-                                Send Challenge
-                            </span>
-                            <span className="text-[10px] text-white/70 mt-1 font-mono uppercase tracking-widest">
-                                Est Payout: {Math.floor(wager * 1.85)} (15% Rake)
-                            </span>
-                        </button>
+                        )}
                     </>
                 )}
             </div>

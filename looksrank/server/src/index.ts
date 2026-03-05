@@ -352,7 +352,7 @@ app.post('/api/complete-challenge', async (req: Request, res: Response) => {
         if (challenge.status !== 'pending') throw new Error("Challenge already completed.");
 
         const challengerId = challenge.challenger_id;
-        const challengerScore = challenge.profiles?.best_today || 0;
+        const challengerScore = challenge.challenger_score || 0;
         const wager = challenge.wager;
         const pot = wager * 2;
         const rake = 0.15;
