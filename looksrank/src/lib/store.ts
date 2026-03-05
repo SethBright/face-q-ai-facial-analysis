@@ -10,12 +10,22 @@ export interface Challenge {
     wager: number;
     challenger_score: number | null;
     challenger_image_url: string | null;
+    challenger_details: any | null;
+    target_score: number | null;
+    target_image_url: string | null;
+    target_details: any | null;
     status: 'pending' | 'completed' | 'declined';
     winner_id: string | null;
     created_at: string;
     profiles?: {
         id: string;
         best_today: number;
+    };
+    profiles_target?: {
+        id: string;
+    };
+    profiles_challenger?: {
+        id: string;
     };
 }
 

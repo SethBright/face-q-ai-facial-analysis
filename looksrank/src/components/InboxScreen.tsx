@@ -5,6 +5,7 @@ import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import { Inbox, Swords, X, Loader2, Coins, Share2, Sparkles, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
+import { supabase } from '../lib/supabase';
 import * as htmlToImage from 'html-to-image';
 import type { RankResult } from '../lib/api';
 
@@ -47,9 +48,9 @@ export const InboxScreen: React.FC = () => {
     const resultRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setIsCameraActive(!!activeChallengeId);
+        setIsCameraActive(!!activeChallengeId || !!duelResult);
         return () => setIsCameraActive(false);
-    }, [activeChallengeId, setIsCameraActive]);
+    }, [activeChallengeId, duelResult, setIsCameraActive]);
 
     const activeChallenge = challenges.find(c => c.id === activeChallengeId);
 
@@ -86,13 +87,44 @@ export const InboxScreen: React.FC = () => {
 
         try {
             const res = await rankFace(imageToScore);
-            setIsScanning(false);
 
-            // We use the backend to handle payouts securely
-            const fulfillRes = await completeChallenge(activeChallenge.id, userId!, res.score);
+            // 1. Upload Target Selfie
+            let targetPublicUrl = null;
+            try {
+                const base64Data = imageToScore.split(',')[1];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+                const fileName = `challenge_target_${userId}_${Date.now()}.jpg`;
+                const { error: uploadError } = await supabase.storage
+                    .from('selfies')
+                    .upload(fileName, blob);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl: url } } = supabase.storage
+                    .from('selfies')
+                    .getPublicUrl(fileName);
+                targetPublicUrl = url;
+            } catch (err) {
+                console.error("Target selfie upload failed:", err);
+            }
+
+            // 2. Fulfill securely through backend
+            const fulfillRes = await completeChallenge(
+                activeChallenge.id,
+                userId!,
+                res.score,
+                targetPublicUrl,
+                res.details
+            );
 
             if (fulfillRes.success) {
-                // Set the result to show the cool results screen
                 setDuelResult({
                     result: res,
                     capturedImage: imageToScore,
@@ -217,33 +249,6 @@ export const InboxScreen: React.FC = () => {
                                     </div>
                                 );
                             })}
-                        </div>
-
-                        {/* Your Detailed Rating Card (Inlined) */}
-                        <div className="mt-4 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-                            <div className="flex flex-col items-center">
-                                <div className="text-xs font-black tracking-[0.2em] uppercase text-yellow-400 mb-1">{duelResult.result.tier}</div>
-                                <div className="text-[10px] text-gray-500 font-mono bg-dark-800 px-3 py-1 rounded-full border border-white/10 uppercase">
-                                    PSL: <span className="text-primary-400 font-bold">{duelResult.result.psl.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div className="w-full flex flex-col gap-2.5">
-                                {Object.entries(duelResult.result.details || {}).map(([key, val]) => (
-                                    <div key={key} className="flex flex-col gap-1 w-full">
-                                        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                                            <span>{key}</span>
-                                            <span className="text-white font-mono">{val}/100</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-dark-800 rounded-full overflow-hidden border border-white/5">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-primary-500 to-indigo-400 rounded-full"
-                                                style={{ width: `${val}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
 
                         {/* Brand watermark */}
@@ -402,13 +407,38 @@ export const InboxScreen: React.FC = () => {
                                         {c.status === 'declined' ? 'Declined' : c.winner_id === userId ? 'Won' : 'Lost'}
                                     </span>
                                 </div>
-                                <span className={clsx(
-                                    "text-sm font-black font-mono",
-                                    c.status === 'declined' ? "text-gray-500" :
-                                        c.winner_id === userId ? "text-green-400" : "text-red-400"
-                                )}>
-                                    {c.status === 'declined' ? '0' : c.winner_id === userId ? `+${Math.floor(c.wager * 0.85)}` : `-${c.wager}`}
-                                </span>
+                                <div className="flex gap-2">
+                                    {c.status === 'completed' && (
+                                        <button
+                                            onClick={() => {
+                                                const isChallenger = c.challenger_id === userId;
+                                                setDuelResult({
+                                                    result: {
+                                                        score: (isChallenger ? c.challenger_score : c.target_score) || 0,
+                                                        details: (isChallenger ? c.challenger_details : c.target_details) || {},
+                                                        psl: 0,
+                                                        tier: ''
+                                                    } as any,
+                                                    capturedImage: (isChallenger ? c.challenger_image_url : c.target_image_url) || '',
+                                                    challengeId: c.id,
+                                                    challengerScore: (isChallenger ? c.target_score : c.challenger_score) || 0,
+                                                    challengerImage: (isChallenger ? c.target_image_url : c.challenger_image_url) || null,
+                                                    challengerId: isChallenger ? (c.profiles_target?.id || 'Player') : (c.profiles_challenger?.id || 'Player')
+                                                });
+                                            }}
+                                            className="text-[10px] font-bold uppercase tracking-widest text-primary-400 hover:text-white transition-colors"
+                                        >
+                                            View Results
+                                        </button>
+                                    )}
+                                    <span className={clsx(
+                                        "text-sm font-black font-mono",
+                                        c.status === 'declined' ? "text-gray-500" :
+                                            c.winner_id === userId ? "text-green-400" : "text-red-400"
+                                    )}>
+                                        {c.status === 'declined' ? '0' : c.winner_id === userId ? `+${Math.floor(c.wager * 0.85)}` : `-${c.wager}`}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>

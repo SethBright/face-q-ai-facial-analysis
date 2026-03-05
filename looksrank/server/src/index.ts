@@ -330,7 +330,7 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
 
 // --- CHALLENGE FULFILLMENT ---
 app.post('/api/complete-challenge', async (req: Request, res: Response) => {
-    const { challengeId, targetId, targetScore } = req.body;
+    const { challengeId, targetId, targetScore, targetImageUrl, targetDetails } = req.body;
 
     if (!supabaseAdmin) {
         return res.status(500).json({ error: 'Supabase not initialized' });
@@ -371,12 +371,15 @@ app.post('/api/complete-challenge', async (req: Request, res: Response) => {
             resultMessage = "It's a tie! Both players refunded.";
         }
 
-        // 2. Update Challenge status
+        // 2. Update Challenge status and store results
         await supabaseAdmin
             .from('challenges')
             .update({
                 status: 'completed',
-                winner_id: winnerId
+                winner_id: winnerId,
+                target_score: targetScore,
+                target_image_url: targetImageUrl,
+                target_details: targetDetails
             })
             .eq('id', challengeId);
 

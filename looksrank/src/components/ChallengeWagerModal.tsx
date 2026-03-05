@@ -90,6 +90,7 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                     target_id: targetId,
                     wager: wager,
                     challenger_score: res.score,
+                    challenger_details: res.details,
                     challenger_image_url: publicUrl,
                     status: 'pending'
                 });

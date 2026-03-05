@@ -81,13 +81,25 @@ export const MOCK_LEADERBOARD_DAILY: LeaderboardEntry[] = Array.from({ length: 5
     };
 });
 
-export async function completeChallenge(challengeId: string, targetId: string, targetScore: number): Promise<{ success: boolean; winnerId: string | null; message: string }> {
+export async function completeChallenge(
+    challengeId: string,
+    targetId: string,
+    targetScore: number,
+    targetImageUrl: string | null,
+    targetDetails: any
+): Promise<{ success: boolean; winnerId: string | null; message: string }> {
     try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const res = await fetch(`${apiUrl}/api/complete-challenge`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ challengeId, targetId, targetScore })
+            body: JSON.stringify({
+                challengeId,
+                targetId,
+                targetScore,
+                targetImageUrl,
+                targetDetails
+            })
         });
 
         if (res.ok) {
