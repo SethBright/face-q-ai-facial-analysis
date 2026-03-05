@@ -193,13 +193,14 @@ Be brutally honest, but precise.Analyze the image and return ONLY the JSON.
             return res.status(400).json({ error: parsed.reason });
         }
 
-        // 4. Calculate Tier based on PSL
+        // 4. Calculate Tier based on Score (guarantees consistency with UI)
         let tier = 'Subhuman';
-        if (parsed.psl >= 7.0) tier = 'Chad';
-        else if (parsed.psl >= 6.0) tier = 'Chadlite';
-        else if (parsed.psl >= 5.0) tier = 'HTN';
-        else if (parsed.psl >= 4.0) tier = 'MTN';
-        else if (parsed.psl >= 3.0) tier = 'LTN';
+        const score = parsed.score;
+        if (score >= 85) tier = 'Chad';
+        else if (score >= 75) tier = 'Chadlite';
+        else if (score >= 60) tier = 'HTN';
+        else if (score >= 45) tier = 'MTN';
+        else if (score >= 30) tier = 'LTN';
 
         // 5. Return the full result
         return res.json({
