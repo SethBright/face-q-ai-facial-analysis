@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import { rankFace } from '../lib/api';
+import clsx from 'clsx';
 
 interface ChallengeWagerModalProps {
     targetId: string;
@@ -72,7 +73,7 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="w-full max-w-sm glass-panel p-6 shadow-2xl shadow-primary-500/20 border border-primary-500/30 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            <div className="w-full max-w-sm glass-panel p-6 shadow-2xl shadow-primary-500/20 border border-primary-500/30 animate-in zoom-in-95 duration-300 relative overflow-y-auto max-h-[90vh] custom-scrollbar">
 
                 {isSent ? (
                     <div className="flex flex-col items-center justify-center py-8 gap-4 animate-in zoom-in-50">
@@ -95,10 +96,12 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                             </button>
                         </div>
 
-                        <div className="flex flex-col items-center gap-2 mb-6 text-center">
-                            <div className="text-sm text-gray-400 font-bold uppercase tracking-widest">Target to Beat</div>
-                            <div className="text-4xl font-black text-white">{Math.round(targetScore)}</div>
-                            <div className="text-xs text-primary-300 font-mono bg-primary-500/10 px-3 py-1 rounded-full border border-primary-500/20">
+                        <div className={clsx("flex flex-col items-center gap-1 mb-6 text-center transition-all duration-300", phase === 'camera' ? "scale-90 opacity-80" : "scale-100")}>
+                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Target to Beat</div>
+                            <div className={clsx("font-black text-white transition-all", phase === 'camera' ? "text-2xl" : "text-4xl")}>
+                                {Math.round(targetScore)}
+                            </div>
+                            <div className="text-[10px] text-primary-300 font-mono bg-primary-500/10 px-3 py-0.5 rounded-full border border-primary-500/20">
                                 {targetName}
                             </div>
                         </div>
