@@ -5,7 +5,6 @@ import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import { Inbox, Swords, X, Loader2, Coins, Share2, Sparkles, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
-import { supabase } from '../lib/supabase';
 import * as htmlToImage from 'html-to-image';
 import type { RankResult } from '../lib/api';
 

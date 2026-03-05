@@ -99,7 +99,7 @@ export const LeaderboardScreen: React.FC = () => {
                                         className="w-full h-full object-cover animate-in fade-in duration-500"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = 'none';
-                                        (e.target as HTMLImageElement).parentElement!.innerText = entry.id.substring(0, 2).toUpperCase();
+                                            (e.target as HTMLImageElement).parentElement!.innerText = entry.id.substring(0, 2).toUpperCase();
                                         }}
                                     />
                                 ) : (
@@ -141,7 +141,6 @@ export const LeaderboardScreen: React.FC = () => {
                 <ChallengeWagerModal
                     targetId={challengeTarget.id}
                     targetName={challengeTarget.id}
-                    targetScore={challengeTarget.score}
                     onClose={() => setChallengeTarget(null)}
                 />
             )}

@@ -10,11 +10,10 @@ import clsx from 'clsx';
 interface ChallengeWagerModalProps {
     targetId: string;
     targetName: string;
-    targetScore: number;
     onClose: () => void;
 }
 
-export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ targetId, targetName, targetScore, onClose }) => {
+export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ targetId, targetName, onClose }) => {
     const userId = useAppStore(state => state.userId);
     const coins = useAppStore(state => state.coins);
     const deductCoins = useAppStore(state => state.deductCoins);
@@ -115,7 +114,7 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="w-full max-w-sm glass-panel p-6 shadow-2xl shadow-primary-500/20 border border-primary-500/30 animate-in zoom-in-95 duration-300 relative overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <div className="w-full max-sm glass-panel p-6 shadow-2xl shadow-primary-500/20 border border-primary-500/30 animate-in zoom-in-95 duration-300 relative overflow-y-auto max-h-[90vh] custom-scrollbar">
 
                 {isSent ? (
                     <div className="flex flex-col items-center justify-center py-8 gap-4 animate-in zoom-in-50">
