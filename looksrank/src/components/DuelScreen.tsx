@@ -223,10 +223,46 @@ export const DuelScreen: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Detailed Comparison */}
+                        <div className="flex flex-col gap-3 px-2 pb-2 relative z-10 w-full overflow-hidden">
+                            <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center mb-1">Detailed Breakdown</h5>
+                            {['harmony', 'dimorphism', 'angularity', 'skin'].map((key) => {
+                                const valA = (resultA.details as any)?.[key] || 0;
+                                const valB = (resultB.details as any)?.[key] || 0;
+                                const diff = valA - valB;
+
+                                return (
+                                    <div key={key} className="flex flex-col gap-1">
+                                        <div className="flex justify-between items-end text-[9px] font-bold uppercase tracking-widest text-gray-400 px-1">
+                                            <span className={clsx(diff > 0 && "text-primary-400 font-black")}>{valA}%</span>
+                                            <span className="text-gray-500 opacity-60 font-black">{key}</span>
+                                            <span className={clsx(diff < 0 && "text-red-400 font-black")}>{valB}%</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-dark-800 rounded-full overflow-hidden flex border border-white/5">
+                                            <div
+                                                className={clsx(
+                                                    "h-full rounded-l-full transition-all duration-1000",
+                                                    diff > 0 ? "bg-primary-500" : "bg-dark-700"
+                                                )}
+                                                style={{ width: `${(valA / (valA + valB)) * 100}%` }}
+                                            />
+                                            <div
+                                                className={clsx(
+                                                    "h-full rounded-r-full transition-all duration-1000",
+                                                    diff < 0 ? "bg-red-500" : "bg-dark-700"
+                                                )}
+                                                style={{ width: `${(valB / (valA + valB)) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
                         {/* Brand watermark for sharing */}
                         <div className="flex justify-center items-center gap-2 opacity-50 relative z-10 mt-2">
-                            <Swords className="w-4 h-4" />
-                            <span className="text-xs font-bold tracking-widest uppercase">LooksRank Duel</span>
+                            <Swords className="w-4 h-4 ml-1" />
+                            <span className="text-[10px] font-bold tracking-[0.3em] uppercase">LooksRank Duel Duel Match</span>
                         </div>
                     </div>
 
