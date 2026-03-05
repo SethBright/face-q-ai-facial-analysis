@@ -80,3 +80,23 @@ export const MOCK_LEADERBOARD_DAILY: LeaderboardEntry[] = Array.from({ length: 5
         ...calculateRank(Math.max(10, score))
     };
 });
+
+export async function completeChallenge(challengeId: string, targetId: string, targetScore: number): Promise<{ success: boolean; winnerId: string | null; message: string }> {
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${apiUrl}/api/complete-challenge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ challengeId, targetId, targetScore })
+        });
+
+        if (res.ok) {
+            return await res.json();
+        } else {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to complete challenge");
+        }
+    } catch (e: any) {
+        throw new Error(e.message || "Failed to reach backend");
+    }
+}

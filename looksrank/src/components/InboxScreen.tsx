@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../lib/store';
-import { rankFace } from '../lib/api';
+import { rankFace, completeChallenge } from '../lib/api';
 import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import { Inbox, Swords, X, Loader2, Coins } from 'lucide-react';
@@ -65,34 +65,27 @@ export const InboxScreen: React.FC = () => {
             const res = await rankFace(imageToScore);
             setIsScanning(false);
 
-            // Challenger's score is in the profiles join
-            const challengerScore = activeChallenge.profiles?.best_today || 0;
-            let winner_id = null;
+            // We use the backend to handle payouts securely
+            const fulfillRes = await completeChallenge(activeChallenge.id, userId!, res.score);
 
-            if (res.score > challengerScore) {
-                // We won! Give us back our matched wager + the challenger's wager minus 15% rake
-                const payout = activeChallenge.wager + Math.floor(activeChallenge.wager * 0.85);
-                await addCoins(payout);
-                winner_id = userId;
-            } else if (res.score < challengerScore) {
-                // We lost the wager
-                winner_id = activeChallenge.challenger_id;
-            } else {
-                // Tie - give our matched wager back
-                await addCoins(activeChallenge.wager);
+            if (fulfillRes.success) {
+                // If the user won, they get the payout.
+                // We don't call addCoins here because the profile update will sync it on refresh,
+                // but for immediate feedback we should probably refresh the store coins.
+                // However, fetchChallenges normally updates the UI.
+
+                // Alert the user of the result
+                alert(fulfillRes.message);
             }
-
-            await supabase.from('challenges').update({
-                status: 'completed',
-                winner_id
-            }).eq('id', activeChallenge.id);
-
         } catch (err: any) {
+            console.error("Fulfillment error:", err);
             alert(err.message || "Analysis failed.");
-            await addCoins(activeChallenge.wager); // Refund on fail
+            await addCoins(activeChallenge.wager); // Refund matching bet on fail
         } finally {
             setIsScanning(false);
             await fetchChallenges();
+            // We should also refresh the profile to see the new coin balance
+            useAppStore.getState().initializeAuth();
             setActiveChallengeId(null);
         }
     };
@@ -134,7 +127,7 @@ export const InboxScreen: React.FC = () => {
                     disabled={isScanning || coins < activeChallenge.wager}
                     className="w-full py-4 rounded-xl bg-red-500 hover:bg-red-400 text-white font-black active:scale-95 transition-all flex justify-center items-center gap-2 shadow-lg shadow-red-500/20 disabled:opacity-50"
                 >
-                    {isScanning ? 'EVALUATING...' : `ACCEPT & SCAN (-${activeChallenge.wager} Coins)`}
+                    {isScanning ? 'EVALUATING...' : `MATCH & FIGHT (-${activeChallenge.wager} Coins)`}
                 </button>
             </div>
         );
@@ -182,7 +175,7 @@ export const InboxScreen: React.FC = () => {
                                         <X className="w-4 h-4 text-gray-400" />
                                     </button>
                                     <button onClick={() => setActiveChallengeId(challenge.id)} className="px-4 h-10 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center font-bold text-sm tracking-widest text-white shadow-lg shadow-red-500/20 transition-all">
-                                        FIGHT
+                                        MATCH & FIGHT
                                     </button>
                                 </div>
                             </div>

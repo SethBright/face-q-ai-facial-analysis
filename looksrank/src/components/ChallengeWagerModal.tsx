@@ -112,6 +112,16 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                                 ))}
                             </div>
 
+                            <div className="flex flex-col gap-1 mt-2">
+                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest flex justify-between">
+                                    <span>Your Bet: {wager}</span>
+                                    <span>Opponent Match: {wager}</span>
+                                </div>
+                                <div className="text-[10px] text-primary-400 font-black text-center mt-1">
+                                    TOTAL POT: {wager * 2} COINS
+                                </div>
+                            </div>
+
                             {coins < 4 && (
                                 <div className="text-xs text-red-400 text-center font-bold mt-2">Not enough coins to challenge</div>
                             )}

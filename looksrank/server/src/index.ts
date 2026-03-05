@@ -328,6 +328,99 @@ app.post('/api/create-checkout-session', async (req: Request, res: Response) => 
     }
 });
 
+// --- CHALLENGE FULFILLMENT ---
+app.post('/api/complete-challenge', async (req: Request, res: Response) => {
+    const { challengeId, targetId, targetScore } = req.body;
+
+    if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase not initialized' });
+    }
+
+    if (!challengeId || !targetId || targetScore === undefined) {
+        return res.status(400).json({ error: 'Missing challenge details' });
+    }
+
+    try {
+        // 1. Fetch challenge and verify it's still pending
+        const { data: challenge, error: cError } = await supabaseAdmin
+            .from('challenges')
+            .select('*, profiles!challenges_challenger_id_fkey(id, best_today)')
+            .eq('id', challengeId)
+            .single();
+
+        if (cError || !challenge) throw new Error("Challenge not found.");
+        if (challenge.status !== 'pending') throw new Error("Challenge already completed.");
+
+        const challengerId = challenge.challenger_id;
+        const challengerScore = challenge.profiles?.best_today || 0;
+        const wager = challenge.wager;
+        const pot = wager * 2;
+        const rake = 0.15;
+        const payout = Math.floor(wager + (wager * (1 - rake))); // Winner gets their wager back + 85% of opponent's wager
+
+        let winnerId = null;
+        let resultMessage = "";
+
+        if (targetScore > challengerScore) {
+            winnerId = targetId;
+            resultMessage = `Target wins! ${payout} coins credited.`;
+        } else if (challengerScore > targetScore) {
+            winnerId = challengerId;
+            resultMessage = `Challenger wins! ${payout} coins credited.`;
+        } else {
+            resultMessage = "It's a tie! Both players refunded.";
+        }
+
+        // 2. Update Challenge status
+        await supabaseAdmin
+            .from('challenges')
+            .update({
+                status: 'completed',
+                winner_id: winnerId
+            })
+            .eq('id', challengeId);
+
+        // 3. Handle Payouts
+        if (winnerId) {
+            // Give payout to winner
+            const { data: winnerProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('coins')
+                .eq('id', winnerId)
+                .single();
+
+            if (winnerProfile) {
+                await supabaseAdmin
+                    .from('profiles')
+                    .update({ coins: winnerProfile.coins + payout })
+                    .eq('id', winnerId);
+            }
+        } else {
+            // TIE: Refund both players their wager
+            const usersToRefund = [challengerId, targetId];
+            for (const uid of usersToRefund) {
+                const { data: p } = await supabaseAdmin
+                    .from('profiles')
+                    .select('coins')
+                    .eq('id', uid)
+                    .single();
+                if (p) {
+                    await supabaseAdmin
+                        .from('profiles')
+                        .update({ coins: p.coins + wager })
+                        .eq('id', uid);
+                }
+            }
+        }
+
+        res.json({ success: true, winnerId, message: resultMessage });
+
+    } catch (error: any) {
+        console.error("Challenge fulfillment error:", error);
+        res.status(500).json({ error: error.message || "Fulfillment failed" });
+    }
+});
+
 app.listen(Number(port), "0.0.0.0", () => {
     console.log(`LooksRank API server running on port ${port} (0.0.0.0)`);
 });
