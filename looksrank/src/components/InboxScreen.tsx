@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../lib/store';
-import { rankFace, completeChallenge } from '../lib/api';
+import { rankFace, completeChallenge, declineChallenge } from '../lib/api';
 import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import { Inbox, Swords, X, Loader2, Coins, Share2, Sparkles, RefreshCw } from 'lucide-react';
@@ -55,8 +55,12 @@ export const InboxScreen: React.FC = () => {
     const activeChallenge = challenges.find(c => c.id === activeChallengeId);
 
     const handleDecline = async (id: string) => {
-        await supabase.from('challenges').update({ status: 'declined' }).eq('id', id);
-        await fetchChallenges();
+        try {
+            await declineChallenge(id);
+            await fetchChallenges();
+        } catch (err: any) {
+            alert(err.message || "Failed to decline challenge");
+        }
     };
 
     const handleAcceptAndScan = async () => {

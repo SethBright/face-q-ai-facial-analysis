@@ -100,3 +100,23 @@ export async function completeChallenge(challengeId: string, targetId: string, t
         throw new Error(e.message || "Failed to reach backend");
     }
 }
+
+export async function declineChallenge(challengeId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${apiUrl}/api/decline-challenge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ challengeId })
+        });
+
+        if (res.ok) {
+            return await res.json();
+        } else {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to decline challenge");
+        }
+    } catch (e: any) {
+        throw new Error(e.message || "Failed to reach backend");
+    }
+}

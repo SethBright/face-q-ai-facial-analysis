@@ -139,13 +139,12 @@ export const ChallengeWagerModal: React.FC<ChallengeWagerModalProps> = ({ target
                         </div>
 
                         <div className={clsx("flex flex-col items-center gap-1 mb-6 text-center transition-all duration-300", phase === 'camera' ? "scale-90 opacity-80" : "scale-100")}>
-                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Target to Beat</div>
-                            <div className={clsx("font-black text-white transition-all", phase === 'camera' ? "text-2xl" : "text-4xl")}>
-                                {Math.round(targetScore)}
-                            </div>
-                            <div className="text-[10px] text-primary-300 font-mono bg-primary-500/10 px-3 py-0.5 rounded-full border border-primary-500/20">
-                                {targetName}
-                            </div>
+                            <h3 className="text-xl font-black text-white px-4 text-center mt-2">
+                                Challenge <span className="text-primary-400">{targetName}</span>
+                            </h3>
+                            <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase mt-1">
+                                Face-off for the pot
+                            </p>
                         </div>
 
                         {phase === 'wager' ? (

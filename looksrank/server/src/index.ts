@@ -421,6 +421,59 @@ app.post('/api/complete-challenge', async (req: Request, res: Response) => {
     }
 });
 
+app.post('/api/decline-challenge', async (req: Request, res: Response) => {
+    const { challengeId } = req.body;
+
+    if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase not initialized' });
+    }
+
+    if (!challengeId) {
+        return res.status(400).json({ error: 'Missing challengeId' });
+    }
+
+    try {
+        // 1. Fetch challenge and verify it's still pending
+        const { data: challenge, error: cError } = await supabaseAdmin
+            .from('challenges')
+            .select('*')
+            .eq('id', challengeId)
+            .single();
+
+        if (cError || !challenge) throw new Error("Challenge not found.");
+        if (challenge.status !== 'pending') throw new Error("Challenge already completed or declined.");
+
+        const challengerId = challenge.challenger_id;
+        const wager = challenge.wager;
+
+        // 2. Update Challenge status to declined
+        await supabaseAdmin
+            .from('challenges')
+            .update({ status: 'declined' })
+            .eq('id', challengeId);
+
+        // 3. Refund the challenger
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('coins')
+            .eq('id', challengerId)
+            .single();
+
+        if (profile) {
+            await supabaseAdmin
+                .from('profiles')
+                .update({ coins: profile.coins + wager })
+                .eq('id', challengerId);
+        }
+
+        res.json({ success: true, message: "Challenge declined and wager refunded." });
+
+    } catch (error: any) {
+        console.error("Challenge decline error:", error);
+        res.status(500).json({ error: error.message || "Decline failed" });
+    }
+});
+
 app.listen(Number(port), "0.0.0.0", () => {
     console.log(`LooksRank API server running on port ${port} (0.0.0.0)`);
 });
