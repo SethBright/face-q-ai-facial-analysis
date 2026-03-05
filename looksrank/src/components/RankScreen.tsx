@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAppStore } from '../lib/store';
 import { rankFace } from '../lib/api';
 import type { RankResult } from '../lib/api';
-import { Coins, Loader2, Play, Share2, RefreshCw } from 'lucide-react';
+import { Coins, Loader2, Share2, RefreshCw } from 'lucide-react';
 import { CameraOverlay } from './CameraOverlay';
 import type { CameraHandle } from './CameraOverlay';
 import * as htmlToImage from 'html-to-image';
@@ -173,8 +173,8 @@ export const RankScreen: React.FC = () => {
                 ) : null}
 
                 {result && capturedImage ? (
-                    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                        <div className="w-full max-w-md flex flex-col gap-0 shadow-2xl rounded-3xl overflow-hidden border border-white/10">
+                    <div className="fixed inset-0 z-50 flex flex-col items-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                        <div className="w-full max-w-md flex flex-col gap-0 shadow-2xl rounded-3xl overflow-hidden border border-white/10 my-auto">
                             {/* Result Card Content (for sharing) */}
                             <div ref={resultRef} className="w-full flex flex-col items-center bg-dark-950">
                                 {/* Header Image */}
@@ -239,6 +239,8 @@ export const RankScreen: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+                        {/* Buffer for small screens/safe areas */}
+                        <div className="h-32 w-full shrink-0" />
                     </div>
                 ) : null}
 
@@ -250,65 +252,63 @@ export const RankScreen: React.FC = () => {
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
                 {!result && (
                     <>
+                        <div className="flex flex-col gap-3 p-4 bg-dark-800/50 rounded-2xl border border-yellow-500/10 shadow-inner overflow-hidden">
+                            <div className="flex justify-between items-center text-sm font-bold text-yellow-500/80">
+                                <span className="uppercase tracking-widest text-[10px]">Set Your Bet</span>
+                                <span className="flex items-center gap-1 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full text-xs"><Coins className="w-3 h-3" /> {stakeAmount}</span>
+                            </div>
+
+                            <input
+                                type="range"
+                                min="0"
+                                max={Math.max(0, Math.min(coins, 500))}
+                                step="1"
+                                value={stakeAmount}
+                                onChange={(e) => setStakeAmount(Number(e.target.value))}
+                                className="w-full h-2 bg-dark-900 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                            />
+
+                            <div className="grid grid-cols-4 gap-2">
+                                {[4, 50, 100, Math.min(coins, 500)].map((amt, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setStakeAmount(amt)}
+                                        disabled={coins < amt}
+                                        className="py-2 ml-0.5 mr-0.5 rounded-lg bg-dark-900 border border-white/5 text-xs font-mono text-gray-400 hover:text-yellow-400 hover:border-yellow-500/30 transition-colors disabled:opacity-30 disabled:hover:border-white/5 disabled:hover:text-gray-400"
+                                    >
+                                        {i === 3 ? 'MAX' : amt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <button
-                            onClick={() => handleAttempt('normal')}
-                            disabled={isScanning || coins < 2 || !displayName}
-                            className="relative w-full py-4 rounded-2xl primary-gradient text-white font-black text-lg shadow-xl shadow-primary-500/20 active:scale-95 transition-all overflow-hidden group disabled:opacity-50 disabled:active:scale-100"
+                            onClick={() => handleAttempt(stakeAmount > 0 ? 'double-or-nothing' : 'normal')}
+                            disabled={isScanning || coins < (stakeAmount > 0 ? stakeAmount : 2) || !displayName}
+                            className={clsx(
+                                "relative w-full py-5 rounded-2xl text-white font-black text-xl shadow-xl active:scale-95 transition-all overflow-hidden group disabled:opacity-50 disabled:active:scale-100",
+                                stakeAmount > 0
+                                    ? "bg-gradient-to-r from-yellow-600 to-amber-500 shadow-yellow-500/20"
+                                    : "primary-gradient shadow-primary-500/20"
+                            )}
                         >
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform" />
-                            <span className="relative flex items-center justify-center gap-2">
-                                RANK ME <span className="bg-black/20 px-2 py-0.5 rounded-full text-sm font-bold flex items-center gap-1"><Coins className="w-3 h-3 text-yellow-400" /> 2</span>
+                            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform" />
+                            <span className="relative flex flex-col items-center justify-center leading-tight">
+                                <span className="flex items-center gap-2">
+                                    RANK ME <span className="bg-black/20 px-3 py-0.5 rounded-full text-sm font-bold flex items-center gap-1">
+                                        <Coins className="w-3 h-3 text-yellow-400" /> {stakeAmount > 0 ? stakeAmount : 2}
+                                    </span>
+                                </span>
+                                {stakeAmount > 0 && (
+                                    <span className="text-[10px] text-black/50 uppercase tracking-[0.2em] mt-1 font-black">
+                                        Win {stakeAmount * 2} if you beat {bestToday || '0'}
+                                    </span>
+                                )}
                             </span>
                         </button>
-
-                        {bestToday > 0 && (
-                            <div className="flex flex-col gap-3 p-4 bg-dark-800/50 rounded-2xl border border-yellow-500/20 shadow-inner overflow-hidden">
-                                <div className="flex justify-between items-center text-sm font-bold text-yellow-500/80">
-                                    <span className="uppercase tracking-widest text-xs">Set Your Wager</span>
-                                    <span className="flex items-center gap-1 text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full"><Coins className="w-3 h-3" /> {stakeAmount}</span>
-                                </div>
-
-                                <input
-                                    type="range"
-                                    min="4"
-                                    max={Math.max(4, Math.min(coins, 500))}
-                                    step="1"
-                                    value={stakeAmount}
-                                    onChange={(e) => setStakeAmount(Number(e.target.value))}
-                                    className="w-full h-2 bg-dark-900 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                                    disabled={coins < 4}
-                                />
-
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[10, 50, 100, Math.min(coins, 500)].map((amt, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setStakeAmount(Math.max(4, amt))}
-                                            disabled={coins < amt}
-                                            className="py-2 ml-0.5 mr-0.5 rounded-lg bg-dark-900 border border-white/5 text-xs font-mono text-gray-400 hover:text-yellow-400 hover:border-yellow-500/30 transition-colors disabled:opacity-30 disabled:hover:border-white/5 disabled:hover:text-gray-400"
-                                        >
-                                            {i === 3 ? 'MAX' : amt}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <button
-                                    onClick={() => handleAttempt('double-or-nothing')}
-                                    disabled={isScanning || coins < stakeAmount || !displayName}
-                                    className="w-full mt-2 py-4 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-500 font-bold active:scale-95 transition-all disabled:opacity-50 flex flex-col items-center justify-center leading-tight shadow-lg shadow-yellow-500/5"
-                                >
-                                    <span className="flex items-center gap-1 uppercase tracking-wider text-sm">
-                                        <Play className="w-4 h-4 fill-yellow-500" /> Confirm Double or Nothing
-                                    </span>
-                                    <span className="text-xs text-yellow-600/70 mt-1 font-mono">
-                                        Win {stakeAmount * 2} if you beat {bestToday}
-                                    </span>
-                                </button>
-                            </div>
-                        )}
                     </>
                 )}
             </div>
