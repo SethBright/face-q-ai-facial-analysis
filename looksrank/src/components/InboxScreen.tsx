@@ -172,7 +172,7 @@ export const InboxScreen: React.FC = () => {
             duelResult.result.score < duelResult.challengerScore ? 'CHALLENGER' : 'TIE';
 
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center p-4 bg-dark-950/95 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
+            <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 bg-dark-950/95 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
                 <div className="w-full max-w-md flex flex-col gap-6 my-auto pt-8 pb-12">
 
                     {/* Winner Banner */}
@@ -222,34 +222,6 @@ export const InboxScreen: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Detailed Comparison */}
-                        <div className="flex flex-col gap-3 px-1 w-full">
-                            {['harmony', 'dimorphism', 'angularity', 'skin'].map((key) => {
-                                const valYou = (duelResult.result.details as any)?.[key] || 0;
-                                const valThem = Math.max(0, Math.min(100, duelResult.challengerScore * (0.8 + Math.random() * 0.4))); // Heuristic for visual comparison
-                                const diff = valYou - valThem;
-
-                                return (
-                                    <div key={key} className="flex flex-col gap-1">
-                                        <div className="flex justify-between items-end text-[8px] font-bold uppercase tracking-widest text-gray-400 px-1">
-                                            <span className={clsx(diff < 0 && "text-red-400")}>{Math.round(valThem)}%</span>
-                                            <span className="text-gray-500 opacity-60 font-black">{key}</span>
-                                            <span className={clsx(diff > 0 && "text-primary-400")}>{Math.round(valYou)}%</span>
-                                        </div>
-                                        <div className="w-full h-1 bg-dark-800 rounded-full overflow-hidden flex border border-white/5">
-                                            <div
-                                                className={clsx("h-full transition-all duration-1000", diff < 0 ? "bg-red-500" : "bg-dark-700")}
-                                                style={{ width: `${(valThem / (valThem + valYou || 1)) * 100}%` }}
-                                            />
-                                            <div
-                                                className={clsx("h-full transition-all duration-1000", diff > 0 ? "bg-primary-500" : "bg-dark-700")}
-                                                style={{ width: `${(valYou / (valThem + valYou || 1)) * 100}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
 
                         {/* Brand watermark */}
                         <div className="flex justify-center items-center gap-2 opacity-50 mt-4">

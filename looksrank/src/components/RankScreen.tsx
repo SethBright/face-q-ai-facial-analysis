@@ -18,9 +18,9 @@ export const RankScreen: React.FC = () => {
     const setIsCameraActive = useAppStore(state => state.setIsCameraActive);
 
     React.useEffect(() => {
-        setIsCameraActive(!!result);
+        setIsCameraActive(!!result || isScanning);
         return () => setIsCameraActive(false);
-    }, [result, setIsCameraActive]);
+    }, [result, isScanning, setIsCameraActive]);
 
     // For sharing
     const resultRef = useRef<HTMLDivElement>(null);
@@ -179,7 +179,7 @@ export const RankScreen: React.FC = () => {
                 ) : null}
 
                 {result && capturedImage ? (
-                    <div className="fixed inset-0 z-50 flex flex-col items-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                    <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
                         <div className="w-full max-w-md flex flex-col gap-0 shadow-2xl rounded-3xl overflow-hidden border border-white/10 my-auto">
                             {/* Result Card Content (for sharing) */}
                             <div ref={resultRef} className="w-full flex flex-col items-center bg-dark-950">
@@ -193,35 +193,17 @@ export const RankScreen: React.FC = () => {
                                             {result.score}
                                         </div>
                                         <div className="text-xl font-black tracking-[0.2em] uppercase text-yellow-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] mt-1">
-                                            {result.tier}
+                                            Elite Tier
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Stats Area */}
                                 <div className="w-full p-6 bg-dark-900 flex flex-col items-center gap-4">
-                                    <div className="text-[11px] text-gray-400 font-mono bg-dark-800 px-4 py-1 rounded-full border border-white/10">
-                                        PSL RATING: <span className="text-primary-400 font-bold">{result.psl.toFixed(2)}</span>
+                                    <div className="flex justify-center items-center gap-2 opacity-50 mt-4">
+                                        <RefreshCw className="w-3 h-3" />
+                                        <span className="text-[8px] font-bold tracking-[0.3em] uppercase">Scan Complete</span>
                                     </div>
-
-                                    {result.details && (
-                                        <div className="w-full flex flex-col gap-3.5 mt-2">
-                                            {Object.entries(result.details).map(([key, val]) => (
-                                                <div key={key} className="flex flex-col gap-1.5 w-full">
-                                                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                                                        <span>{key}</span>
-                                                        <span className="text-white font-mono">{val}/100</span>
-                                                    </div>
-                                                    <div className="w-full h-2 bg-dark-800 rounded-full overflow-hidden border border-white/5">
-                                                        <div
-                                                            className="h-full bg-gradient-to-r from-primary-500 to-indigo-400 rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]"
-                                                            style={{ width: `${val}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
